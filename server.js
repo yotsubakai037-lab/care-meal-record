@@ -1,230 +1,186 @@
+'use strict';
 const express = require('express');
-const Anthropic = require('@anthropic-ai/sdk');
-const fs = require('fs').promises;
+const admin   = require('firebase-admin');
+const { VertexAI } = require('@google-cloud/vertexai');
 const path = require('path');
 const crypto = require('crypto');
-const os = require('os');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
+const app  = express();
+const PORT = process.env.PORT || 8080;
+const PROJECT  = process.env.GOOGLE_CLOUD_PROJECT;
+const LOCATION = process.env.VERTEX_LOCATION || 'asia-northeast1';
 
-// Anthropicクライアント初期化
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// ── Firebase Admin（Cloud Run では ADC で自動認証） ──
+admin.initializeApp();
+const db = admin.firestore();
 
-// データ読み書きユーティリティ
-async function ensureDir(dir) {
-  await fs.mkdir(dir, { recursive: true });
-}
+// ── Vertex AI Gemini ──
+const vertexAI = new VertexAI({ project: PROJECT, location: LOCATION });
+const gemini = vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash-001' });
 
-async function readJSON(filePath, defaultVal = []) {
-  try {
-    const data = await fs.readFile(filePath, 'utf8');
-    return JSON.parse(data);
-  } catch {
-    return defaultVal;
-  }
-}
-
-async function writeJSON(filePath, data) {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-}
-
-// ローカルIPアドレス取得
-function getLocalIP() {
-  const nets = os.networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) {
-        return net.address;
-      }
-    }
-  }
-  return 'localhost';
-}
-
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ============================
+// 認証ミドルウェア
+// ============================
+async function requireAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: '認証が必要です' });
+  }
+  try {
+    const decoded = await admin.auth().verifyIdToken(header.slice(7));
+    req.uid = decoded.uid;
+    next();
+  } catch {
+    res.status(401).json({ error: '認証トークンが無効です' });
+  }
+}
+
+// ============================
+// Firebase 設定（フロント用）
+// ============================
+app.get('/api/firebase-config', (_req, res) => {
+  res.json({
+    apiKey:     process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || `${PROJECT}.firebaseapp.com`,
+    projectId:  PROJECT,
+  });
+});
 
 // ============================
 // 利用者 API
 // ============================
+const residentsCol = (uid) => db.collection(`users/${uid}/residents`);
 
-// 利用者一覧取得
-app.get('/api/residents', async (req, res) => {
-  const residents = await readJSON(path.join(DATA_DIR, 'residents.json'));
-  res.json(residents);
-});
-
-// 利用者追加
-app.post('/api/residents', async (req, res) => {
-  const { name, room, defaultMealTexture } = req.body;
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: '名前は必須です' });
-  }
-  const residents = await readJSON(path.join(DATA_DIR, 'residents.json'));
-  const resident = {
-    id: crypto.randomUUID(),
-    name: name.trim(),
-    room: (room || '').trim(),
-    defaultMealTexture: defaultMealTexture || '普通食',
-    createdAt: new Date().toISOString(),
-  };
-  residents.push(resident);
-  await writeJSON(path.join(DATA_DIR, 'residents.json'), residents);
-  res.json(resident);
-});
-
-// 利用者削除
-app.delete('/api/residents/:id', async (req, res) => {
-  const residents = await readJSON(path.join(DATA_DIR, 'residents.json'));
-  const filtered = residents.filter(r => r.id !== req.params.id);
-  await writeJSON(path.join(DATA_DIR, 'residents.json'), filtered);
-  // 関連する記録も削除
+app.get('/api/residents', requireAuth, async (req, res) => {
   try {
-    await fs.unlink(path.join(DATA_DIR, `records_${req.params.id}.json`));
-  } catch {}
-  res.json({ ok: true });
+    const snap = await residentsCol(req.uid).orderBy('createdAt', 'asc').get();
+    res.json(snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: toISO(d.data().createdAt) })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/residents', requireAuth, async (req, res) => {
+  const { name, room, defaultMealTexture } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: '名前は必須です' });
+  try {
+    const data = {
+      name: name.trim(),
+      room: (room || '').trim(),
+      defaultMealTexture: defaultMealTexture || '普通食',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    const ref = await residentsCol(req.uid).add(data);
+    res.json({ id: ref.id, ...data });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/residents/:id', requireAuth, async (req, res) => {
+  try {
+    // 関連する記録を一括削除
+    const recSnap = await recordsCol(req.uid, req.params.id).get();
+    const batch = db.batch();
+    recSnap.forEach(d => batch.delete(d.ref));
+    batch.delete(residentsCol(req.uid).doc(req.params.id));
+    await batch.commit();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ============================
 // 記録 API
 // ============================
+const recordsCol = (uid, residentId) =>
+  db.collection(`users/${uid}/residents/${residentId}/records`);
 
-// 記録一覧取得（新しい順）
-app.get('/api/records/:residentId', async (req, res) => {
-  const records = await readJSON(path.join(DATA_DIR, `records_${req.params.residentId}.json`));
-  res.json([...records].reverse());
-});
-
-// 記録保存
-app.post('/api/records', async (req, res) => {
-  const { residentId, mealTime, mealTexture, imageBase64, amount, percentage, aiComment, note } = req.body;
-  if (!residentId) {
-    return res.status(400).json({ error: '利用者IDが必要です' });
-  }
-  const records = await readJSON(path.join(DATA_DIR, `records_${residentId}.json`));
-  const record = {
-    id: crypto.randomUUID(),
-    residentId,
-    mealTime: mealTime || '昼食',
-    mealTexture: mealTexture || '普通食',
-    imageBase64: imageBase64 || null,
-    amount: amount || '',
-    percentage: typeof percentage === 'number' ? percentage : 0,
-    aiComment: aiComment || '',
-    note: note || '',
-    createdAt: new Date().toISOString(),
-  };
-  records.push(record);
-  await writeJSON(path.join(DATA_DIR, `records_${residentId}.json`), records);
-  res.json(record);
-});
-
-// 記録削除
-app.delete('/api/records/:residentId/:recordId', async (req, res) => {
-  const records = await readJSON(path.join(DATA_DIR, `records_${req.params.residentId}.json`));
-  const filtered = records.filter(r => r.id !== req.params.recordId);
-  await writeJSON(path.join(DATA_DIR, `records_${req.params.residentId}.json`), filtered);
-  res.json({ ok: true });
-});
-
-// ============================
-// AI分析 API
-// ============================
-
-app.post('/api/analyze', async (req, res) => {
-  const { imageBase64, mealTexture, mealTime } = req.body;
-
-  if (!imageBase64) {
-    return res.status(400).json({ error: '画像が必要です' });
-  }
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY が設定されていません' });
-  }
-
-  // base64のプレフィックスを除去（data:image/jpeg;base64,... 形式の場合）
-  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-
+app.get('/api/records/:residentId', requireAuth, async (req, res) => {
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 512,
-      messages: [{
+    const snap = await recordsCol(req.uid, req.params.residentId)
+      .orderBy('createdAt', 'desc').get();
+    res.json(snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: toISO(d.data().createdAt) })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/records', requireAuth, async (req, res) => {
+  const { residentId, mealTime, mealTexture, thumbnailBase64,
+          amount, percentage, aiComment, note } = req.body;
+  if (!residentId) return res.status(400).json({ error: '利用者IDが必要です' });
+  try {
+    const data = {
+      residentId,
+      mealTime:       mealTime       || '昼食',
+      mealTexture:    mealTexture    || '普通食',
+      thumbnailBase64: thumbnailBase64 || null,   // 200px サムネイル
+      amount:         amount         || '',
+      percentage:     typeof percentage === 'number' ? percentage : 0,
+      aiComment:      aiComment      || '',
+      note:           note           || '',
+      createdAt:      admin.firestore.FieldValue.serverTimestamp(),
+    };
+    const ref = await recordsCol(req.uid, residentId).add(data);
+    res.json({ id: ref.id, ...data });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/records/:residentId/:id', requireAuth, async (req, res) => {
+  try {
+    await recordsCol(req.uid, req.params.residentId).doc(req.params.id).delete();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ============================
+// AI 分析（Vertex AI Gemini）
+// ============================
+app.post('/api/analyze', requireAuth, async (req, res) => {
+  const { imageBase64, mealTexture, mealTime } = req.body;
+  if (!imageBase64) return res.status(400).json({ error: '画像が必要です' });
+
+  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+  try {
+    const result = await gemini.generateContent({
+      contents: [{
         role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: 'image/jpeg',
-              data: base64Data,
-            },
-          },
-          {
-            type: 'text',
-            text: `介護施設の食事記録です。食事の種類は「${mealTime || '食事'}」、食事形態は「${mealTexture || '普通食'}」です。
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: base64Data } },
+          { text: `介護施設の${mealTime || '食事'}記録です。食事形態「${mealTexture || '普通食'}」。
 
-写真を見て以下を判定してください。
-
-回答はJSON形式のみで返してください（説明文は不要）:
+写真を分析し、必ずJSON形式のみで返答してください（説明文不要）:
 {
-  "amount": "全量",
-  "percentage": 100,
-  "comment": "コメント"
+  "amount": "半量",
+  "percentage": 50,
+  "comment": "主食を半量程度摂取。副菜の摂取は少なめ。食欲は普通。"
 }
 
-amountの選択肢: "全量"(100%) / "3/4量"(75%) / "半量"(50%) / "1/4量"(25%) / "ほとんど食べず"(10%以下)
-commentは介護記録として有用な観察コメントを1〜2文で。`
-          }
+amountは必ず以下から選択:
+"全量"(90%以上) / "3/4量"(75%) / "半量"(50%) / "1/4量"(25%) / "ほとんど食べず"(10%以下)
+
+commentは介護記録として有用な観察を1〜2文、日本語で。` }
         ]
       }]
     });
 
-    const text = response.content[0].text.trim();
-    let result;
+    const text = result.response.candidates[0].content.parts[0].text.trim();
+    let parsed;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('JSON not found');
-      result = JSON.parse(jsonMatch[0]);
+      parsed = JSON.parse((text.match(/\{[\s\S]*?\}/) || ['{}'])[0]);
     } catch {
-      result = { amount: '判定不可', percentage: 0, comment: '画像から食事量を判定できませんでした。' };
+      parsed = { amount: '判定不可', percentage: 0, comment: text.slice(0, 100) };
     }
-
-    res.json(result);
-  } catch (error) {
-    console.error('AI分析エラー:', error.message);
-    res.status(500).json({ error: 'AI分析に失敗しました: ' + error.message });
+    res.json(parsed);
+  } catch (e) {
+    console.error('Vertex AI error:', e.message);
+    res.status(500).json({ error: 'AI分析に失敗: ' + e.message });
   }
 });
 
-// APIキー確認
-app.get('/api/status', (req, res) => {
-  res.json({
-    hasApiKey: !!process.env.ANTHROPIC_API_KEY,
-    version: '1.0.0',
-  });
-});
+// ユーティリティ
+function toISO(ts) {
+  return ts?.toDate?.()?.toISOString() || ts || null;
+}
 
-// サーバー起動
-ensureDir(DATA_DIR).then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    const ip = getLocalIP();
-    console.log('\n====================================');
-    console.log('  介護食事記録システム 起動中');
-    console.log('====================================');
-    console.log(`  PC用URL:      http://localhost:${PORT}`);
-    console.log(`  iPhone用URL:  http://${ip}:${PORT}`);
-    console.log('====================================');
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.log('\n⚠️  警告: ANTHROPIC_API_KEY が未設定です');
-      console.log('   AI分析機能は使用できません');
-      console.log('   設定方法: set ANTHROPIC_API_KEY=your_key_here\n');
-    } else {
-      console.log('\n✅ AI分析機能: 有効\n');
-    }
-  });
+app.listen(PORT, () => {
+  console.log(`\n🏥 介護食事記録システム (GCP版)`);
+  console.log(`Port: ${PORT}  Project: ${PROJECT}  Location: ${LOCATION}\n`);
 });

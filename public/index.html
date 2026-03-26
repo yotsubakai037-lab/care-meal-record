@@ -4,629 +4,332 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>介護食事記録</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --primary: #1565C0;
-      --primary-light: #1976D2;
-      --primary-bg: #E3F2FD;
-      --accent: #2E7D32;
-      --accent-light: #43A047;
-      --warn: #E65100;
-      --danger: #C62828;
-      --bg: #F0F4F8;
-      --card: #FFFFFF;
-      --text: #1A1A2E;
-      --text-sub: #546E7A;
-      --border: #CFD8DC;
-      --header-h: 56px;
-      --safe-top: env(safe-area-inset-top, 0px);
+      --primary:#1565C0; --primary-light:#1976D2; --primary-bg:#E3F2FD;
+      --accent:#2E7D32; --accent-light:#43A047;
+      --warn:#E65100; --danger:#C62828;
+      --bg:#F0F4F8; --card:#FFFFFF; --text:#1A1A2E; --text-sub:#546E7A;
+      --border:#CFD8DC; --header-h:56px; --safe-top:env(safe-area-inset-top,0px);
     }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;
+      background:var(--bg); color:var(--text); min-height:100vh;
+      font-size:16px; -webkit-tap-highlight-color:transparent; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      font-size: 16px;
-      -webkit-tap-highlight-color: transparent;
-      overscroll-behavior: none;
+    /* ── ログイン画面 ── */
+    #screenLogin {
+      min-height:100vh; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; padding:32px 24px; gap:32px;
     }
+    .login-logo { font-size:64px; }
+    .login-title { font-size:24px; font-weight:700; text-align:center; }
+    .login-sub   { font-size:14px; color:var(--text-sub); text-align:center; line-height:1.6; }
+    .btn-google  {
+      display:flex; align-items:center; gap:12px;
+      background:#fff; border:1.5px solid var(--border); border-radius:14px;
+      padding:14px 24px; font-size:16px; font-weight:600; cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,.1); width:100%; justify-content:center;
+    }
+    .btn-google:active { transform:scale(.97); }
+    .google-icon { width:24px; height:24px; }
 
-    /* ========== ヘッダー ========== */
+    /* ── ヘッダー ── */
     .header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 200;
-      background: var(--primary);
-      color: #fff;
-      height: calc(var(--header-h) + var(--safe-top));
-      padding-top: var(--safe-top);
-      display: flex;
-      align-items: center;
-      padding: var(--safe-top) 8px 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      position:fixed; top:0; left:0; right:0; z-index:200;
+      background:var(--primary); color:#fff;
+      height:calc(var(--header-h) + var(--safe-top));
+      padding-top:var(--safe-top);
+      display:flex; align-items:center; padding-left:4px; padding-right:4px;
+      box-shadow:0 2px 8px rgba(0,0,0,.3);
     }
     .header-btn {
-      width: 44px; height: 44px;
-      display: flex; align-items: center; justify-content: center;
-      border: none; background: transparent;
-      color: #fff; font-size: 22px; cursor: pointer;
-      border-radius: 22px;
-      flex-shrink: 0;
+      width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+      border:none; background:transparent; color:#fff; font-size:22px;
+      cursor:pointer; border-radius:22px; flex-shrink:0;
     }
-    .header-btn:active { background: rgba(255,255,255,.2); }
-    .header-title {
-      flex: 1;
-      font-size: 17px;
-      font-weight: 600;
-      text-align: center;
-      padding: 0 4px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .header-right { width: 44px; flex-shrink: 0; }
-
-    /* ========== コンテンツ ========== */
-    .screen {
-      display: none;
-      padding-top: calc(var(--header-h) + var(--safe-top));
-      min-height: 100vh;
-      padding-bottom: 24px;
-    }
-    .screen.active { display: block; }
-
-    /* ========== ホーム画面 ========== */
-    .resident-list {
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    .header-btn:active { background:rgba(255,255,255,.2); }
+    .header-title { flex:1; font-size:17px; font-weight:600; text-align:center;
+      padding:0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .header-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+    .user-avatar {
+      width:32px; height:32px; border-radius:16px;
+      background:rgba(255,255,255,.3); display:flex; align-items:center;
+      justify-content:center; font-size:14px; font-weight:700; color:#fff;
+      cursor:pointer; border:none;
     }
 
+    /* ── スクリーン ── */
+    .screen { display:none; padding-top:calc(var(--header-h) + var(--safe-top));
+      min-height:100vh; padding-bottom:80px; }
+    .screen.active { display:block; }
+
+    /* ── 利用者リスト ── */
+    .resident-list { padding:12px; display:flex; flex-direction:column; gap:10px; }
     .resident-card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
-      cursor: pointer;
-      transition: transform .1s, box-shadow .1s;
-      -webkit-user-select: none;
+      background:var(--card); border-radius:14px; padding:16px;
+      display:flex; align-items:center; gap:14px;
+      box-shadow:0 1px 4px rgba(0,0,0,.08); cursor:pointer;
     }
-    .resident-card:active { transform: scale(.97); box-shadow: none; }
-
+    .resident-card:active { transform:scale(.97); }
     .resident-avatar {
-      width: 48px; height: 48px;
-      border-radius: 24px;
-      background: var(--primary-bg);
-      color: var(--primary);
-      font-size: 22px;
-      font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      width:48px; height:48px; border-radius:24px;
+      background:var(--primary-bg); color:var(--primary);
+      font-size:22px; font-weight:700; display:flex;
+      align-items:center; justify-content:center; flex-shrink:0;
     }
-    .resident-info { flex: 1; min-width: 0; }
-    .resident-name {
-      font-size: 17px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .resident-meta {
-      font-size: 13px;
-      color: var(--text-sub);
-      margin-top: 2px;
-    }
-    .resident-arrow {
-      color: var(--border);
-      font-size: 18px;
-    }
+    .resident-info  { flex:1; min-width:0; }
+    .resident-name  { font-size:17px; font-weight:600; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis; }
+    .resident-meta  { font-size:13px; color:var(--text-sub); margin-top:2px; }
+    .resident-arrow { color:var(--border); font-size:18px; }
 
-    .empty-state {
-      text-align: center;
-      padding: 60px 24px 24px;
-      color: var(--text-sub);
-    }
-    .empty-icon { font-size: 56px; margin-bottom: 12px; }
-    .empty-text { font-size: 15px; line-height: 1.6; }
+    /* ── 空状態 ── */
+    .empty-state { text-align:center; padding:60px 24px 24px; color:var(--text-sub); }
+    .empty-icon  { font-size:56px; margin-bottom:12px; }
+    .empty-text  { font-size:15px; line-height:1.6; }
 
-    /* ========== FAB ========== */
+    /* ── FAB ── */
     .fab {
-      position: fixed;
-      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-      right: 20px;
-      width: 58px; height: 58px;
-      border-radius: 29px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      font-size: 28px;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 16px rgba(21,101,192,.5);
-      cursor: pointer;
-      z-index: 100;
-      transition: transform .1s;
+      position:fixed; bottom:calc(24px + env(safe-area-inset-bottom,0px));
+      right:20px; width:58px; height:58px; border-radius:29px;
+      background:var(--primary); color:#fff; border:none;
+      font-size:26px; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 4px 16px rgba(21,101,192,.5); cursor:pointer; z-index:100;
     }
-    .fab:active { transform: scale(.93); }
+    .fab:active { transform:scale(.93); }
 
-    /* ========== 利用者詳細 ========== */
-    .record-list {
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .record-card {
-      background: var(--card);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
-    }
+    /* ── 記録カード ── */
+    .record-list { padding:12px; display:flex; flex-direction:column; gap:10px; }
+    .record-card { background:var(--card); border-radius:14px; overflow:hidden;
+      box-shadow:0 1px 4px rgba(0,0,0,.08); }
     .record-card-header {
-      display: flex;
-      align-items: center;
-      padding: 12px 14px 10px;
-      gap: 10px;
+      display:flex; align-items:center; padding:12px 14px 10px; gap:10px;
     }
-    .record-mealtime-badge {
-      font-size: 12px;
-      font-weight: 600;
-      padding: 3px 9px;
-      border-radius: 10px;
-      background: var(--primary-bg);
-      color: var(--primary);
+    .mealtime-badge {
+      font-size:12px; font-weight:600; padding:3px 9px; border-radius:10px;
+      background:var(--primary-bg); color:var(--primary);
     }
-    .record-date {
-      font-size: 13px;
-      color: var(--text-sub);
-      flex: 1;
+    .record-date  { font-size:13px; color:var(--text-sub); flex:1; }
+    .record-del   {
+      width:32px; height:32px; border-radius:16px;
+      border:none; background:transparent; color:#B0BEC5;
+      font-size:16px; cursor:pointer; display:flex;
+      align-items:center; justify-content:center;
     }
-    .record-delete-btn {
-      width: 32px; height: 32px;
-      border-radius: 16px;
-      border: none; background: transparent;
-      color: #B0BEC5; font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-    }
-    .record-delete-btn:active { background: #FFEBEE; color: var(--danger); }
-
-    .record-body {
-      display: flex;
-      gap: 12px;
-      padding: 0 14px 14px;
-    }
+    .record-del:active { background:#FFEBEE; color:var(--danger); }
+    .record-body  { display:flex; gap:12px; padding:0 14px 14px; }
     .record-thumb {
-      width: 72px; height: 72px;
-      border-radius: 10px;
-      object-fit: cover;
-      background: var(--bg);
-      flex-shrink: 0;
-      border: 1px solid var(--border);
+      width:72px; height:72px; border-radius:10px; object-fit:cover;
+      background:var(--bg); flex-shrink:0; border:1px solid var(--border);
     }
-    .record-thumb-placeholder {
-      width: 72px; height: 72px;
-      border-radius: 10px;
-      background: var(--bg);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 28px;
-      flex-shrink: 0;
-      border: 1px solid var(--border);
+    .record-thumb-ph {
+      width:72px; height:72px; border-radius:10px; background:var(--bg);
+      display:flex; align-items:center; justify-content:center; font-size:28px;
+      flex-shrink:0; border:1px solid var(--border);
     }
-    .record-details { flex: 1; min-width: 0; }
-    .amount-bar-wrap {
-      margin-bottom: 6px;
-    }
-    .amount-label {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-    .amount-text { font-size: 16px; font-weight: 700; }
-    .amount-pct { font-size: 14px; color: var(--text-sub); }
-    .amount-bar {
-      height: 8px;
-      border-radius: 4px;
-      background: var(--border);
-      overflow: hidden;
-    }
-    .amount-bar-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width .5s ease;
-    }
-    .record-comment {
-      font-size: 13px;
-      color: var(--text-sub);
-      margin-top: 4px;
-      line-height: 1.5;
-    }
-    .record-note {
-      font-size: 13px;
-      color: var(--text);
-      margin-top: 4px;
-      padding: 6px 8px;
-      background: #FFF9C4;
-      border-radius: 6px;
-      line-height: 1.5;
-    }
-    .record-texture {
-      font-size: 12px;
-      color: var(--text-sub);
-      margin-top: 4px;
-    }
+    .record-details { flex:1; min-width:0; }
+    .amount-label   { display:flex; justify-content:space-between; margin-bottom:4px; }
+    .amount-text    { font-size:16px; font-weight:700; }
+    .amount-pct     { font-size:14px; color:var(--text-sub); }
+    .amount-bar     { height:8px; border-radius:4px; background:var(--border); overflow:hidden; }
+    .amount-fill    { height:100%; border-radius:4px; }
+    .record-texture { font-size:12px; color:var(--text-sub); margin-top:4px; }
+    .record-comment { font-size:13px; color:var(--text-sub); margin-top:4px; line-height:1.5; }
+    .record-note    { font-size:13px; color:var(--text); margin-top:4px;
+      padding:6px 8px; background:#FFF9C4; border-radius:6px; line-height:1.5; }
 
-    /* ========== 新規記録 ========== */
-    .form-section {
-      background: var(--card);
-      margin: 12px;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
-    }
-    .form-section-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-sub);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      padding: 14px 16px 6px;
-    }
-    .form-row {
-      padding: 10px 16px;
-      border-top: 1px solid var(--border);
-    }
-    .form-row:first-of-type { border-top: none; }
-    .form-label {
-      font-size: 14px;
-      color: var(--text-sub);
-      margin-bottom: 6px;
-      display: block;
-    }
+    /* ── フォーム ── */
+    .form-section   { background:var(--card); margin:12px; border-radius:14px;
+      overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    .form-sec-title { font-size:13px; font-weight:600; color:var(--text-sub);
+      text-transform:uppercase; letter-spacing:.5px; padding:14px 16px 6px; }
+    .form-row       { padding:10px 16px; border-top:1px solid var(--border); }
+    .form-label     { font-size:14px; color:var(--text-sub); margin-bottom:6px; display:block; }
     .form-select, .form-input, .form-textarea {
-      width: 100%;
-      font-size: 16px;
-      font-family: inherit;
-      color: var(--text);
-      background: var(--bg);
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      -webkit-appearance: none;
-      appearance: none;
-      outline: none;
+      width:100%; font-size:16px; font-family:inherit; color:var(--text);
+      background:var(--bg); border:1.5px solid var(--border); border-radius:10px;
+      padding:10px 12px; -webkit-appearance:none; outline:none;
     }
-    .form-select:focus, .form-input:focus, .form-textarea:focus {
-      border-color: var(--primary-light);
-    }
-    .form-select-wrap {
-      position: relative;
-    }
-    .form-select-wrap::after {
-      content: '▾';
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-sub);
-      pointer-events: none;
-      font-size: 14px;
-    }
-    .form-textarea {
-      resize: none;
-      height: 80px;
-      line-height: 1.5;
-    }
+    .form-select:focus,.form-input:focus,.form-textarea:focus { border-color:var(--primary-light); }
+    .form-select-wrap { position:relative; }
+    .form-select-wrap::after { content:'▾'; position:absolute; right:14px; top:50%;
+      transform:translateY(-50%); color:var(--text-sub); pointer-events:none; }
+    .form-textarea  { resize:none; height:80px; line-height:1.5; }
+    .voice-row      { display:flex; gap:8px; align-items:flex-start; }
+    .voice-row .form-textarea { flex:1; }
 
-    /* 写真エリア */
-    .photo-area {
-      margin: 12px;
+    /* 音声ボタン */
+    .voice-btn {
+      width:44px; height:44px; border-radius:22px; border:2px solid var(--border);
+      background:var(--bg); font-size:20px; cursor:pointer; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      transition:all .2s; margin-top:0;
     }
-    .photo-preview {
-      width: 100%;
-      aspect-ratio: 4/3;
-      border-radius: 14px;
-      object-fit: cover;
-      display: none;
-      background: #000;
+    .voice-btn.recording {
+      border-color:var(--danger); background:#FFEBEE;
+      animation:pulse .8s infinite;
     }
-    .photo-placeholder {
-      width: 100%;
-      aspect-ratio: 4/3;
-      border-radius: 14px;
-      background: var(--card);
-      border: 2px dashed var(--border);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-    .photo-placeholder-icon { font-size: 48px; }
-    .photo-placeholder-text { font-size: 14px; color: var(--text-sub); }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
 
-    .photo-btn-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
+    /* ── 写真エリア ── */
+    .photo-area     { margin:12px; }
+    .photo-preview  { width:100%; aspect-ratio:4/3; border-radius:14px;
+      object-fit:cover; display:none; background:#000; }
+    .photo-ph       {
+      width:100%; aspect-ratio:4/3; border-radius:14px;
+      background:var(--card); border:2px dashed var(--border);
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:8px; cursor:pointer;
     }
+    .photo-ph-icon  { font-size:48px; }
+    .photo-ph-text  { font-size:14px; color:var(--text-sub); }
+    .photo-btn-row  { display:flex; gap:8px; margin-top:10px; }
 
-    /* ========== ボタン ========== */
-    .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 14px 20px;
-      border-radius: 14px;
-      border: none;
-      font-size: 16px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: transform .1s, opacity .1s;
-      -webkit-user-select: none;
-    }
-    .btn:active { transform: scale(.97); }
-    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-    .btn-primary { background: var(--primary); color: #fff; flex: 1; }
-    .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
-    .btn-accent { background: var(--accent); color: #fff; }
-    .btn-full { width: 100%; }
-    .btn-sm { padding: 10px 16px; font-size: 14px; }
+    /* ── AI結果 ── */
+    .ai-result      { margin:12px; background:var(--card); border-radius:14px;
+      padding:16px; border-left:4px solid var(--primary-light);
+      box-shadow:0 1px 4px rgba(0,0,0,.08); display:none; }
+    .ai-result.show { display:block; }
+    .ai-title       { font-size:12px; font-weight:600; color:var(--primary);
+      text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+    .ai-amount-big  { font-size:28px; font-weight:700; margin-bottom:4px; }
+    .ai-pct-text    { font-size:14px; color:var(--text-sub); margin-bottom:10px; }
+    .ai-bar         { height:12px; border-radius:6px; background:var(--border);
+      overflow:hidden; margin-bottom:12px; }
+    .ai-bar-fill    { height:100%; border-radius:6px; transition:width .6s ease; }
+    .ai-comment     { font-size:14px; color:var(--text-sub); line-height:1.6; }
 
-    .action-bar {
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    /* ── 量セレクター ── */
+    .amount-selector { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .amount-opt     {
+      padding:12px 6px; border-radius:10px; border:2px solid var(--border);
+      background:var(--bg); text-align:center; cursor:pointer; transition:all .15s;
     }
+    .amount-opt.selected { border-color:var(--primary); background:var(--primary-bg); }
+    .amount-opt-lbl  { font-size:13px; font-weight:600; }
+    .amount-opt-pct  { font-size:12px; color:var(--text-sub); margin-top:2px; }
 
-    /* ========== AI分析結果 ========== */
-    .ai-result {
-      margin: 12px;
-      background: var(--card);
-      border-radius: 14px;
-      padding: 16px;
-      border-left: 4px solid var(--primary-light);
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
-      display: none;
-    }
-    .ai-result.show { display: block; }
-    .ai-result-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--primary);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      margin-bottom: 10px;
-    }
-    .ai-amount-big {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-    .ai-pct {
-      font-size: 14px;
-      color: var(--text-sub);
-      margin-bottom: 10px;
-    }
-    .ai-bar {
-      height: 12px;
-      border-radius: 6px;
-      background: var(--border);
-      overflow: hidden;
-      margin-bottom: 12px;
-    }
-    .ai-bar-fill {
-      height: 100%;
-      border-radius: 6px;
-      transition: width .6s ease;
-    }
-    .ai-comment {
-      font-size: 14px;
-      color: var(--text-sub);
-      line-height: 1.6;
-    }
+    /* ── ボタン ── */
+    .btn { display:flex; align-items:center; justify-content:center; gap:6px;
+      padding:14px 20px; border-radius:14px; border:none;
+      font-size:16px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .btn:active { transform:scale(.97); }
+    .btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    .btn-primary  { background:var(--primary); color:#fff; flex:1; }
+    .btn-secondary{ background:var(--bg); color:var(--text); border:1.5px solid var(--border); }
+    .btn-accent   { background:var(--accent); color:#fff; }
+    .btn-full     { width:100%; }
+    .btn-sm       { padding:10px 16px; font-size:14px; }
+    .action-bar   { padding:12px; display:flex; flex-direction:column; gap:10px; }
 
-    /* ========== ローディング ========== */
+    /* ── 統計 ── */
+    .stats-bar     { display:flex; gap:8px; padding:8px 12px 4px; flex-wrap:wrap; }
+    .stat-chip     { background:var(--card); border-radius:20px; padding:6px 12px;
+      font-size:13px; color:var(--text-sub); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .stat-chip strong { color:var(--text); }
+    .section-hdr   { padding:16px 12px 4px; font-size:13px; font-weight:600;
+      color:var(--text-sub); text-transform:uppercase; letter-spacing:.5px; }
+
+    /* ── 色クラス ── */
+    .c100{background:#2E7D32} .c75{background:#1565C0}
+    .c50{background:#F9A825}  .c25{background:#E65100} .c10{background:#C62828}
+
+    /* ── ローディング ── */
     .loading-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.5);
-      z-index: 999;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 16px;
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
+      z-index:999; align-items:center; justify-content:center;
+      flex-direction:column; gap:16px;
     }
-    .loading-overlay.show { display: flex; }
-    .loading-spinner {
-      width: 52px; height: 52px;
-      border: 4px solid rgba(255,255,255,.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text {
-      color: #fff;
-      font-size: 16px;
-      font-weight: 600;
-    }
+    .loading-overlay.show { display:flex; }
+    .spinner { width:52px; height:52px; border:4px solid rgba(255,255,255,.3);
+      border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .loading-text { color:#fff; font-size:16px; font-weight:600; }
 
-    /* ========== モーダル ========== */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.4);
-      z-index: 300;
-      align-items: flex-end;
-      justify-content: center;
-    }
-    .modal-overlay.show { display: flex; }
-    .modal {
-      background: var(--card);
-      border-radius: 20px 20px 0 0;
-      padding: 24px 20px;
-      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-      width: 100%;
-      max-width: 480px;
-    }
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      text-align: center;
-    }
-    .modal-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 16px;
-    }
-
-    /* ========== トースト ========== */
+    /* ── トースト ── */
     .toast {
-      position: fixed;
-      bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: #323232;
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 24px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 500;
-      transition: transform .3s ease;
-      white-space: nowrap;
-      max-width: 90vw;
+      position:fixed; bottom:calc(80px + env(safe-area-inset-bottom,0px));
+      left:50%; transform:translateX(-50%) translateY(100px);
+      background:#323232; color:#fff; padding:12px 20px; border-radius:24px;
+      font-size:14px; font-weight:500; z-index:500; transition:transform .3s;
+      white-space:nowrap; max-width:90vw;
     }
-    .toast.show { transform: translateX(-50%) translateY(0); }
-    .toast.success { background: var(--accent); }
-    .toast.error { background: var(--danger); }
+    .toast.show    { transform:translateX(-50%) translateY(0); }
+    .toast.success { background:var(--accent); }
+    .toast.error   { background:var(--danger); }
 
-    /* ========== 量セレクター ========== */
-    .amount-selector {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+    /* ── モーダル ── */
+    .modal-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.4);
+      z-index:300; align-items:flex-end; justify-content:center;
     }
-    .amount-option {
-      padding: 12px 6px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      background: var(--bg);
-      text-align: center;
-      cursor: pointer;
-      transition: all .15s;
+    .modal-overlay.show { display:flex; }
+    .modal {
+      background:var(--card); border-radius:20px 20px 0 0;
+      padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px));
+      width:100%; max-width:480px;
     }
-    .amount-option.selected {
-      border-color: var(--primary);
-      background: var(--primary-bg);
-    }
-    .amount-option-label { font-size: 14px; font-weight: 600; }
-    .amount-option-pct { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
-
-    /* ========== APIキー警告 ========== */
-    .api-warn {
-      margin: 12px;
-      background: #FFF3E0;
-      border: 1.5px solid #FFB74D;
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--warn);
-      display: none;
-    }
-    .api-warn.show { display: block; }
-
-    /* ========== 利用者追加フォーム ========== */
-    .screen-inner {
-      padding: 12px;
-    }
-
-    /* 量に応じた色 */
-    .pct-100 { background: #2E7D32; }
-    .pct-75  { background: #1565C0; }
-    .pct-50  { background: #F9A825; }
-    .pct-25  { background: #E65100; }
-    .pct-10  { background: #C62828; }
-
-    /* セクション見出し */
-    .section-header {
-      padding: 16px 12px 4px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-sub);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    /* 今日の統計 */
-    .stats-bar {
-      display: flex;
-      gap: 8px;
-      padding: 0 12px 4px;
-    }
-    .stat-chip {
-      background: var(--card);
-      border-radius: 20px;
-      padding: 6px 12px;
-      font-size: 13px;
-      color: var(--text-sub);
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    }
-    .stat-chip strong { color: var(--text); }
+    .modal-title { font-size:18px; font-weight:700; margin-bottom:12px; text-align:center; }
+    .modal-sub   { font-size:14px; color:var(--text-sub); text-align:center; line-height:1.6; }
+    .modal-actions { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
   </style>
 </head>
 <body>
 
-<!-- ヘッダー -->
-<div class="header" id="header">
-  <button class="header-btn" id="headerBack" style="display:none" onclick="goBack()">‹</button>
-  <div class="header-title" id="headerTitle">介護食事記録</div>
-  <div class="header-right" id="headerRight"></div>
-</div>
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
-<!-- ローディングオーバーレイ -->
+<!-- ローディング -->
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-spinner"></div>
-  <div class="loading-text" id="loadingText">AI分析中...</div>
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">読み込み中...</div>
 </div>
 
 <!-- トースト -->
 <div class="toast" id="toast"></div>
 
+<!-- ヘッダー -->
+<div class="header" id="header" style="display:none">
+  <button class="header-btn" id="headerBack" style="display:none" onclick="goBack()">‹</button>
+  <div class="header-title" id="headerTitle">介護食事記録</div>
+  <div class="header-right" id="headerRight">
+    <button class="user-avatar" id="userAvatar" onclick="showLogoutModal()"></button>
+  </div>
+</div>
+
 <!-- ============================
-     ホーム画面
+     ログイン画面
      ============================ -->
-<div class="screen active" id="screenHome">
-  <div id="apiWarn" class="api-warn">
-    ⚠️ ANTHROPIC_API_KEY が未設定のため、AI分析機能は無効です。<br>
-    写真からの自動判定ができません。手動で量を入力できます。
+<div id="screenLogin">
+  <div class="login-logo">🏥</div>
+  <div>
+    <div class="login-title">介護食事記録</div>
+    <div class="login-sub" style="margin-top:8px">
+      写真 × AI で食事摂取量を<br>かんたん記録
+    </div>
   </div>
-  <div class="resident-list" id="residentList">
-    <!-- 利用者カード -->
+  <button class="btn-google" onclick="signInWithGoogle()">
+    <svg class="google-icon" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+    Googleでログイン
+  </button>
+  <div style="font-size:12px;color:var(--text-sub);text-align:center">
+    Googleアカウントで安全にログイン
   </div>
+</div>
+
+<!-- ============================
+     ホーム
+     ============================ -->
+<div class="screen" id="screenHome">
+  <div class="resident-list" id="residentList"></div>
   <div class="empty-state" id="homeEmpty" style="display:none">
     <div class="empty-icon">👴</div>
     <div class="empty-text">利用者がまだ登録されていません<br>右下の＋ボタンで追加してください</div>
@@ -638,35 +341,31 @@
      利用者追加
      ============================ -->
 <div class="screen" id="screenAddResident">
-  <div class="screen-inner">
+  <div style="padding:12px">
     <div class="form-section">
-      <div class="form-section-title">基本情報</div>
+      <div class="form-sec-title">基本情報</div>
       <div class="form-row">
         <label class="form-label">氏名 *</label>
-        <input type="text" class="form-input" id="addResidentName"
+        <input type="text" class="form-input" id="addName"
           placeholder="例: 山田 太郎" autocomplete="off" enterkeyhint="next">
       </div>
       <div class="form-row">
         <label class="form-label">部屋番号</label>
-        <input type="text" class="form-input" id="addResidentRoom"
-          placeholder="例: 101号室" autocomplete="off" enterkeyhint="next">
+        <input type="text" class="form-input" id="addRoom"
+          placeholder="例: 101号室" autocomplete="off">
       </div>
       <div class="form-row">
         <label class="form-label">通常の食事形態</label>
         <div class="form-select-wrap">
-          <select class="form-select" id="addResidentTexture">
-            <option value="普通食">普通食</option>
-            <option value="刻み食">刻み食</option>
-            <option value="ミキサー食">ミキサー食</option>
-            <option value="軟菜食">軟菜食</option>
-            <option value="ペースト食">ペースト食</option>
-            <option value="嚥下調整食">嚥下調整食</option>
+          <select class="form-select" id="addTexture">
+            <option>普通食</option><option>刻み食</option><option>ミキサー食</option>
+            <option>軟菜食</option><option>ペースト食</option><option>嚥下調整食</option>
           </select>
         </div>
       </div>
     </div>
     <div class="action-bar">
-      <button class="btn btn-primary btn-full" onclick="addResident()">登録する</button>
+      <button class="btn btn-accent btn-full" onclick="addResident()">登録する</button>
       <button class="btn btn-secondary btn-full" onclick="goBack()">キャンセル</button>
     </div>
   </div>
@@ -677,7 +376,7 @@
      ============================ -->
 <div class="screen" id="screenResident">
   <div class="stats-bar" id="residentStats"></div>
-  <div class="section-header">食事記録</div>
+  <div class="section-hdr">食事記録</div>
   <div class="record-list" id="recordList"></div>
   <div class="empty-state" id="residentEmpty" style="display:none">
     <div class="empty-icon">🍱</div>
@@ -690,12 +389,12 @@
      新規記録
      ============================ -->
 <div class="screen" id="screenNewRecord">
-  <!-- 写真エリア -->
+  <!-- 写真 -->
   <div class="photo-area">
-    <img id="photoPreview" class="photo-preview" src="" alt="食事写真">
-    <div class="photo-placeholder" id="photoPlaceholder" onclick="triggerCamera()">
-      <div class="photo-placeholder-icon">📷</div>
-      <div class="photo-placeholder-text">タップして写真を撮影</div>
+    <img id="photoPreview" class="photo-preview" alt="食事写真">
+    <div class="photo-ph" id="photoPlaceholder" onclick="triggerCamera()">
+      <div class="photo-ph-icon">📷</div>
+      <div class="photo-ph-text">タップして写真を撮影</div>
     </div>
     <input type="file" id="cameraInput" accept="image/*" capture="environment"
       style="display:none" onchange="onPhotoSelected(event)">
@@ -705,41 +404,32 @@
     </div>
   </div>
 
-  <!-- API警告（記録画面用） -->
-  <div class="api-warn" id="apiWarnRecord">
-    AI分析は利用できません。手動で摂取量を選択してください。
-  </div>
-
-  <!-- AI分析結果 -->
+  <!-- AI結果 -->
   <div class="ai-result" id="aiResult">
-    <div class="ai-result-title">🤖 AI分析結果</div>
+    <div class="ai-title">🤖 Gemini 分析結果</div>
     <div class="ai-amount-big" id="aiAmount">—</div>
-    <div class="ai-pct" id="aiPct">—</div>
+    <div class="ai-pct-text" id="aiPct">—</div>
     <div class="ai-bar"><div class="ai-bar-fill" id="aiBarFill" style="width:0"></div></div>
     <div class="ai-comment" id="aiComment"></div>
   </div>
 
-  <!-- フォーム -->
+  <!-- 摂取量 -->
   <div class="form-section">
-    <div class="form-section-title">摂取量</div>
+    <div class="form-sec-title">摂取量を選択 *</div>
     <div class="form-row" style="border-top:none">
-      <div class="amount-selector" id="amountSelector">
-        <!-- JS生成 -->
-      </div>
+      <div class="amount-selector" id="amountSelector"></div>
     </div>
   </div>
 
+  <!-- 詳細 -->
   <div class="form-section">
-    <div class="form-section-title">詳細</div>
+    <div class="form-sec-title">詳細</div>
     <div class="form-row">
       <label class="form-label">食事区分</label>
       <div class="form-select-wrap">
         <select class="form-select" id="newMealTime">
-          <option>朝食</option>
-          <option selected>昼食</option>
-          <option>夕食</option>
-          <option>おやつ</option>
-          <option>補食</option>
+          <option>朝食</option><option>昼食</option>
+          <option>夕食</option><option>おやつ</option><option>補食</option>
         </select>
       </div>
     </div>
@@ -747,18 +437,24 @@
       <label class="form-label">食事形態</label>
       <div class="form-select-wrap">
         <select class="form-select" id="newMealTexture">
-          <option>普通食</option>
-          <option>刻み食</option>
-          <option>ミキサー食</option>
-          <option>軟菜食</option>
-          <option>ペースト食</option>
-          <option>嚥下調整食</option>
+          <option>普通食</option><option>刻み食</option><option>ミキサー食</option>
+          <option>軟菜食</option><option>ペースト食</option><option>嚥下調整食</option>
         </select>
       </div>
     </div>
     <div class="form-row">
-      <label class="form-label">備考（自由記入）</label>
-      <textarea class="form-textarea" id="newNote" placeholder="食欲の様子、特記事項など..."></textarea>
+      <label class="form-label">
+        備考
+        <span id="voiceSupported" style="display:none; font-size:12px; margin-left:8px; color:var(--primary)">
+          🎤 音声入力対応
+        </span>
+      </label>
+      <div class="voice-row">
+        <textarea class="form-textarea" id="newNote"
+          placeholder="食欲の様子、特記事項など..."></textarea>
+        <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()"
+          style="display:none" title="音声入力">🎤</button>
+      </div>
     </div>
   </div>
 
@@ -768,133 +464,228 @@
   </div>
 </div>
 
+<!-- ログアウトモーダル -->
+<div class="modal-overlay" id="logoutModal">
+  <div class="modal">
+    <div class="modal-title" id="logoutUserName">アカウント</div>
+    <div class="modal-sub" id="logoutUserEmail"></div>
+    <div class="modal-actions">
+      <button class="btn btn-full" style="background:#C62828;color:#fff"
+        onclick="signOut()">ログアウト</button>
+      <button class="btn btn-secondary btn-full" onclick="closeModal('logoutModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- 利用者削除モーダル -->
 <div class="modal-overlay" id="deleteResidentModal">
   <div class="modal">
     <div class="modal-title">利用者を削除しますか？</div>
-    <div style="text-align:center;color:var(--text-sub);font-size:14px">
-      この操作は取り消せません。<br>すべての食事記録も削除されます。
-    </div>
+    <div class="modal-sub">この操作は取り消せません。<br>すべての食事記録も削除されます。</div>
     <div class="modal-actions">
       <button class="btn btn-full" style="background:#C62828;color:#fff"
         onclick="confirmDeleteResident()">削除する</button>
-      <button class="btn btn-secondary btn-full" onclick="closeDeleteResidentModal()">キャンセル</button>
+      <button class="btn btn-secondary btn-full" onclick="closeModal('deleteResidentModal')">キャンセル</button>
     </div>
   </div>
 </div>
 
 <script>
 // ============================
-// 状態管理
+// 状態
 // ============================
-const state = {
+const S = {
+  user: null,
   residents: [],
   records: [],
   currentResident: null,
-  selectedAmount: null,
-  selectedAmountPct: 0,
-  photoBase64: null,
+  photoFull: null,    // AI分析用（最大1280px）
+  photoThumb: null,   // 保存用（200px）
   aiResult: null,
-  hasApiKey: true,
+  selectedIdx: null,
   deleteTargetId: null,
 };
 
 const AMOUNTS = [
-  { label: '全量',         pct: 100 },
-  { label: '3/4量',        pct: 75  },
-  { label: '半量',         pct: 50  },
-  { label: '1/4量',        pct: 25  },
-  { label: 'ほとんど食べず', pct: 10  },
-  { label: '食べず',       pct: 0   },
+  { label:'全量',          pct:100 },
+  { label:'3/4量',         pct:75  },
+  { label:'半量',          pct:50  },
+  { label:'1/4量',         pct:25  },
+  { label:'ほとんど食べず', pct:10  },
+  { label:'食べず',        pct:0   },
 ];
 
+const screenStack = [];
+
 // ============================
-// 初期化
+// Firebase 初期化
 // ============================
-async function init() {
-  // APIキー確認
+async function initFirebase() {
+  showLoading('起動中...');
   try {
-    const r = await fetch('/api/status');
-    const s = await r.json();
-    state.hasApiKey = s.hasApiKey;
-  } catch {}
+    const cfg = await fetch('/api/firebase-config').then(r => r.json());
+    firebase.initializeApp(cfg);
 
-  if (!state.hasApiKey) {
-    document.getElementById('apiWarn').classList.add('show');
-    document.getElementById('apiWarnRecord').classList.add('show');
+    firebase.auth().onAuthStateChanged(user => {
+      hideLoading();
+      if (user) {
+        S.user = user;
+        document.getElementById('screenLogin').style.display = 'none';
+        document.getElementById('header').style.display = '';
+        const av = document.getElementById('userAvatar');
+        av.textContent = user.displayName?.charAt(0) || user.email?.charAt(0) || '?';
+        initApp();
+      } else {
+        S.user = null;
+        document.getElementById('screenLogin').style.display = '';
+        document.getElementById('header').style.display = 'none';
+      }
+    });
+  } catch (e) {
+    hideLoading();
+    showToast('起動エラー: ' + e.message, 'error');
   }
+}
 
+async function getToken() {
+  if (!S.user) throw new Error('未ログイン');
+  return S.user.getIdToken();
+}
+
+async function api(path, options = {}) {
+  const token = await getToken();
+  const r = await fetch(path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+    body: options.body ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body)) : undefined,
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+// ============================
+// 認証
+// ============================
+async function signInWithGoogle() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await firebase.auth().signInWithPopup(provider);
+  } catch (e) {
+    if (e.code !== 'auth/popup-closed-by-user') {
+      showToast('ログイン失敗: ' + e.message, 'error');
+    }
+  }
+}
+
+function showLogoutModal() {
+  document.getElementById('logoutUserName').textContent =
+    S.user?.displayName || 'アカウント';
+  document.getElementById('logoutUserEmail').textContent =
+    S.user?.email || '';
+  openModal('logoutModal');
+}
+
+async function signOut() {
+  closeModal('logoutModal');
+  await firebase.auth().signOut();
+  screenStack.length = 0;
+  showScreen('screenHome');
+}
+
+// ============================
+// アプリ初期化
+// ============================
+async function initApp() {
+  initVoice();
   buildAmountSelector();
+  showScreen('screenHome');
+  updateHeader('介護食事記録', false);
   await loadResidents();
 }
 
 // ============================
 // 画面遷移
 // ============================
-const screenStack = [];
-
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.getElementById(id)?.classList.add('active');
   window.scrollTo(0, 0);
-}
-
-function goBack() {
-  if (screenStack.length > 0) {
-    const prev = screenStack.pop();
-    showScreen(prev.screen);
-    updateHeader(prev.title, screenStack.length > 0);
-    if (prev.screen === 'screenResident') {
-      renderRecords();
-    }
-  } else {
-    showScreen('screenHome');
-    updateHeader('介護食事記録', false);
-  }
 }
 
 function updateHeader(title, showBack) {
   document.getElementById('headerTitle').textContent = title;
   document.getElementById('headerBack').style.display = showBack ? '' : 'none';
+  document.getElementById('headerRight').style.display = '';
 }
 
-function pushScreen(toScreen, title) {
+function pushScreen(toId, title) {
   const cur = document.querySelector('.screen.active');
-  const curTitle = document.getElementById('headerTitle').textContent;
-  screenStack.push({ screen: cur.id, title: curTitle });
-  showScreen(toScreen);
+  screenStack.push({ screenId: cur?.id, title: document.getElementById('headerTitle').textContent });
+  showScreen(toId);
   updateHeader(title, true);
+  document.getElementById('headerRight').innerHTML =
+    `<button class="user-avatar" id="userAvatar" onclick="showLogoutModal()">` +
+    (S.user?.displayName?.charAt(0) || '?') + `</button>`;
+}
+
+function goBack() {
+  if (screenStack.length === 0) return;
+  const prev = screenStack.pop();
+  showScreen(prev.screenId);
+  updateHeader(prev.title, screenStack.length > 0);
+  document.getElementById('headerRight').innerHTML =
+    `<button class="user-avatar" id="userAvatar" onclick="showLogoutModal()">` +
+    (S.user?.displayName?.charAt(0) || '?') + `</button>`;
+  if (prev.screenId === 'screenResident') {
+    // 削除ボタンを再設定
+    setResidentHeader();
+    renderRecords();
+  }
+}
+
+function setResidentHeader() {
+  const right = document.getElementById('headerRight');
+  right.innerHTML =
+    `<button class="header-btn" onclick="showDeleteResidentModal('${S.currentResident?.id}')" style="font-size:18px">🗑</button>` +
+    `<button class="user-avatar" id="userAvatar" onclick="showLogoutModal()">` +
+    (S.user?.displayName?.charAt(0) || '?') + `</button>`;
 }
 
 // ============================
 // 利用者管理
 // ============================
 async function loadResidents() {
+  showLoading('読み込み中...');
   try {
-    const r = await fetch('/api/residents');
-    state.residents = await r.json();
-  } catch {
-    state.residents = [];
-  }
+    S.residents = await api('/api/residents');
+  } catch (e) {
+    showToast(e.message, 'error');
+    S.residents = [];
+  } finally { hideLoading(); }
   renderResidents();
 }
 
 function renderResidents() {
-  const list = document.getElementById('residentList');
+  const list  = document.getElementById('residentList');
   const empty = document.getElementById('homeEmpty');
-
-  if (state.residents.length === 0) {
-    list.innerHTML = '';
-    empty.style.display = '';
+  if (!S.residents.length) {
+    list.innerHTML = ''; empty.style.display = '';
     return;
   }
   empty.style.display = 'none';
-  list.innerHTML = state.residents.map(r => `
+  list.innerHTML = S.residents.map(r => `
     <div class="resident-card" onclick="openResident('${r.id}')">
       <div class="resident-avatar">${r.name.charAt(0)}</div>
       <div class="resident-info">
-        <div class="resident-name">${escHtml(r.name)}</div>
-        <div class="resident-meta">${r.room ? escHtml(r.room) + ' ・ ' : ''}${escHtml(r.defaultMealTexture)}</div>
+        <div class="resident-name">${h(r.name)}</div>
+        <div class="resident-meta">${r.room ? h(r.room) + ' ・ ' : ''}${h(r.defaultMealTexture)}</div>
       </div>
       <div class="resident-arrow">›</div>
     </div>
@@ -902,197 +693,139 @@ function renderResidents() {
 }
 
 function showAddResident() {
-  document.getElementById('addResidentName').value = '';
-  document.getElementById('addResidentRoom').value = '';
-  document.getElementById('addResidentTexture').value = '普通食';
+  document.getElementById('addName').value = '';
+  document.getElementById('addRoom').value = '';
+  document.getElementById('addTexture').value = '普通食';
   pushScreen('screenAddResident', '利用者追加');
 }
 
 async function addResident() {
-  const name = document.getElementById('addResidentName').value.trim();
-  if (!name) {
-    showToast('氏名を入力してください', 'error');
-    return;
-  }
+  const name = document.getElementById('addName').value.trim();
+  if (!name) { showToast('氏名を入力してください', 'error'); return; }
   showLoading('登録中...');
   try {
-    const r = await fetch('/api/residents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        room: document.getElementById('addResidentRoom').value.trim(),
-        defaultMealTexture: document.getElementById('addResidentTexture').value,
-      }),
-    });
-    if (!r.ok) throw new Error();
+    await api('/api/residents', { method:'POST', body: JSON.stringify({
+      name, room: document.getElementById('addRoom').value.trim(),
+      defaultMealTexture: document.getElementById('addTexture').value,
+    })});
     await loadResidents();
     goBack();
     showToast('利用者を登録しました', 'success');
-  } catch {
-    showToast('登録に失敗しました', 'error');
-  } finally {
-    hideLoading();
-  }
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoading(); }
 }
 
-// 利用者削除
-let deleteResidentId = null;
+let delResId = null;
 function showDeleteResidentModal(id) {
-  deleteResidentId = id;
-  document.getElementById('deleteResidentModal').classList.add('show');
-}
-function closeDeleteResidentModal() {
-  document.getElementById('deleteResidentModal').classList.remove('show');
+  delResId = id;
+  openModal('deleteResidentModal');
 }
 async function confirmDeleteResident() {
-  if (!deleteResidentId) return;
-  closeDeleteResidentModal();
+  closeModal('deleteResidentModal');
+  if (!delResId) return;
   showLoading('削除中...');
   try {
-    await fetch('/api/residents/' + deleteResidentId, { method: 'DELETE' });
+    await api('/api/residents/' + delResId, { method:'DELETE' });
     await loadResidents();
-    // もし今の画面が削除した利用者の画面なら戻る
-    if (state.currentResident && state.currentResident.id === deleteResidentId) {
+    if (S.currentResident?.id === delResId) {
       screenStack.length = 0;
       showScreen('screenHome');
       updateHeader('介護食事記録', false);
     }
     showToast('削除しました');
-  } catch {
-    showToast('削除に失敗しました', 'error');
-  } finally {
-    hideLoading();
-    deleteResidentId = null;
-  }
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoading(); delResId = null; }
 }
 
 // ============================
 // 利用者詳細
 // ============================
-async function openResident(residentId) {
-  const resident = state.residents.find(r => r.id === residentId);
-  if (!resident) return;
-  state.currentResident = resident;
-
-  pushScreen('screenResident', resident.name);
-
-  // ヘッダーに削除ボタン
-  document.getElementById('headerRight').innerHTML =
-    `<button class="header-btn" onclick="showDeleteResidentModal('${residentId}')" title="削除">🗑</button>`;
-
+async function openResident(id) {
+  const r = S.residents.find(r => r.id === id);
+  if (!r) return;
+  S.currentResident = r;
+  pushScreen('screenResident', r.name);
+  setResidentHeader();
   showLoading('読み込み中...');
   try {
-    const r = await fetch('/api/records/' + residentId);
-    state.records = await r.json();
-  } catch {
-    state.records = [];
-  } finally {
-    hideLoading();
-  }
+    S.records = await api('/api/records/' + id);
+  } catch { S.records = []; }
+  finally { hideLoading(); }
   renderRecords();
 }
 
 function renderRecords() {
-  const list = document.getElementById('recordList');
+  const list  = document.getElementById('recordList');
   const empty = document.getElementById('residentEmpty');
   const stats = document.getElementById('residentStats');
-
-  if (state.records.length === 0) {
-    list.innerHTML = '';
-    empty.style.display = '';
-    stats.innerHTML = '';
-    return;
+  if (!S.records.length) {
+    list.innerHTML = ''; empty.style.display = '';
+    stats.innerHTML = ''; return;
   }
   empty.style.display = 'none';
 
   // 今日の統計
   const today = new Date().toDateString();
-  const todayRec = state.records.filter(r => new Date(r.createdAt).toDateString() === today);
-  if (todayRec.length > 0) {
-    const avgPct = Math.round(todayRec.reduce((a, r) => a + r.percentage, 0) / todayRec.length);
+  const todayRec = S.records.filter(r => new Date(r.createdAt).toDateString() === today);
+  if (todayRec.length) {
+    const avg = Math.round(todayRec.reduce((a, r) => a + r.percentage, 0) / todayRec.length);
     stats.innerHTML = `
       <div class="stat-chip">今日: <strong>${todayRec.length}件</strong></div>
-      <div class="stat-chip">平均摂取: <strong>${avgPct}%</strong></div>
+      <div class="stat-chip">平均摂取: <strong>${avg}%</strong></div>
     `;
-  } else {
-    stats.innerHTML = '';
-  }
+  } else { stats.innerHTML = ''; }
 
-  list.innerHTML = state.records.map(rec => {
+  list.innerHTML = S.records.map(rec => {
     const dt = new Date(rec.createdAt);
-    const dateStr = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
-    const colorClass = rec.percentage >= 100 ? 'pct-100'
-      : rec.percentage >= 75 ? 'pct-75'
-      : rec.percentage >= 50 ? 'pct-50'
-      : rec.percentage >= 25 ? 'pct-25' : 'pct-10';
-
-    const thumbHtml = rec.imageBase64
-      ? `<img class="record-thumb" src="${rec.imageBase64}" alt="食事写真" loading="lazy">`
-      : `<div class="record-thumb-placeholder">🍱</div>`;
-
-    const commentHtml = rec.aiComment
-      ? `<div class="record-comment">${escHtml(rec.aiComment)}</div>` : '';
-    const noteHtml = rec.note
-      ? `<div class="record-note">📝 ${escHtml(rec.note)}</div>` : '';
-
+    const ds = `${dt.getMonth()+1}/${dt.getDate()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    const cc = rec.percentage >= 100 ? 'c100' : rec.percentage >= 75 ? 'c75'
+             : rec.percentage >= 50 ? 'c50'  : rec.percentage >= 25 ? 'c25' : 'c10';
+    const thumb = rec.thumbnailBase64
+      ? `<img class="record-thumb" src="${rec.thumbnailBase64}" alt="食事" loading="lazy">`
+      : `<div class="record-thumb-ph">🍱</div>`;
     return `
       <div class="record-card">
         <div class="record-card-header">
-          <span class="record-mealtime-badge">${escHtml(rec.mealTime)}</span>
-          <span class="record-date">${dateStr}</span>
-          <button class="record-delete-btn" onclick="deleteRecord('${rec.id}')">✕</button>
+          <span class="mealtime-badge">${h(rec.mealTime)}</span>
+          <span class="record-date">${ds}</span>
+          <button class="record-del" onclick="deleteRecord('${S.currentResident.id}','${rec.id}')">✕</button>
         </div>
         <div class="record-body">
-          ${thumbHtml}
+          ${thumb}
           <div class="record-details">
-            <div class="amount-bar-wrap">
-              <div class="amount-label">
-                <span class="amount-text">${escHtml(rec.amount)}</span>
-                <span class="amount-pct">${rec.percentage}%</span>
-              </div>
-              <div class="amount-bar">
-                <div class="amount-bar-fill ${colorClass}" style="width:${rec.percentage}%"></div>
-              </div>
+            <div class="amount-label">
+              <span class="amount-text">${h(rec.amount)}</span>
+              <span class="amount-pct">${rec.percentage}%</span>
             </div>
-            <div class="record-texture">${escHtml(rec.mealTexture)}</div>
-            ${commentHtml}
-            ${noteHtml}
+            <div class="amount-bar"><div class="amount-fill ${cc}" style="width:${rec.percentage}%"></div></div>
+            <div class="record-texture">${h(rec.mealTexture)}</div>
+            ${rec.aiComment ? `<div class="record-comment">${h(rec.aiComment)}</div>` : ''}
+            ${rec.note ? `<div class="record-note">📝 ${h(rec.note)}</div>` : ''}
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
-async function deleteRecord(recordId) {
-  if (!state.currentResident) return;
+async function deleteRecord(residentId, recordId) {
   if (!confirm('この記録を削除しますか？')) return;
   showLoading('削除中...');
   try {
-    await fetch(`/api/records/${state.currentResident.id}/${recordId}`, { method: 'DELETE' });
-    const r = await fetch('/api/records/' + state.currentResident.id);
-    state.records = await r.json();
+    await api(`/api/records/${residentId}/${recordId}`, { method:'DELETE' });
+    S.records = await api('/api/records/' + residentId);
     renderRecords();
     showToast('削除しました');
-  } catch {
-    showToast('削除に失敗しました', 'error');
-  } finally {
-    hideLoading();
-  }
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoading(); }
 }
 
 // ============================
 // 新規記録
 // ============================
 function showNewRecord() {
-  if (!state.currentResident) return;
-
-  // リセット
-  state.photoBase64 = null;
-  state.aiResult = null;
-  state.selectedAmount = null;
-  state.selectedAmountPct = 0;
+  if (!S.currentResident) return;
+  S.photoFull = S.photoThumb = S.aiResult = null;
+  S.selectedIdx = null;
 
   document.getElementById('photoPreview').style.display = 'none';
   document.getElementById('photoPlaceholder').style.display = '';
@@ -1100,45 +833,27 @@ function showNewRecord() {
   document.getElementById('aiResult').classList.remove('show');
   document.getElementById('newNote').value = '';
 
-  // 利用者のデフォルト食事形態を設定
-  const textureSel = document.getElementById('newMealTexture');
-  textureSel.value = state.currentResident.defaultMealTexture || '普通食';
+  document.getElementById('newMealTexture').value = S.currentResident.defaultMealTexture || '普通食';
 
-  // 時間帯から食事区分を自動設定
-  const h = new Date().getHours();
-  const mealTimeSel = document.getElementById('newMealTime');
-  if (h < 10) mealTimeSel.value = '朝食';
-  else if (h < 14) mealTimeSel.value = '昼食';
-  else if (h < 17) mealTimeSel.value = 'おやつ';
-  else mealTimeSel.value = '夕食';
+  const h2 = new Date().getHours();
+  document.getElementById('newMealTime').value =
+    h2 < 10 ? '朝食' : h2 < 14 ? '昼食' : h2 < 17 ? 'おやつ' : '夕食';
 
-  selectAmount(null);
-  pushScreen('screenNewRecord', '食事記録');
-  document.getElementById('headerRight').innerHTML = '';
+  buildAmountSelector();
+  pushScreen('screenNewRecord', '食事記録を追加');
 }
 
 function buildAmountSelector() {
-  const wrap = document.getElementById('amountSelector');
-  wrap.innerHTML = AMOUNTS.map((a, i) => `
-    <div class="amount-option" id="amountOpt${i}" onclick="selectAmount(${i})">
-      <div class="amount-option-label">${a.label}</div>
-      <div class="amount-option-pct">${a.pct}%</div>
-    </div>
-  `).join('');
+  document.getElementById('amountSelector').innerHTML = AMOUNTS.map((a, i) => `
+    <div class="amount-opt" id="aopt${i}" onclick="selectAmount(${i})">
+      <div class="amount-opt-lbl">${a.label}</div>
+      <div class="amount-opt-pct">${a.pct}%</div>
+    </div>`).join('');
 }
 
 function selectAmount(idx) {
-  AMOUNTS.forEach((_, i) => {
-    const el = document.getElementById('amountOpt' + i);
-    if (el) el.classList.toggle('selected', i === idx);
-  });
-  if (idx !== null && idx !== undefined) {
-    state.selectedAmount = AMOUNTS[idx].label;
-    state.selectedAmountPct = AMOUNTS[idx].pct;
-  } else {
-    state.selectedAmount = null;
-    state.selectedAmountPct = 0;
-  }
+  AMOUNTS.forEach((_, i) => document.getElementById('aopt'+i)?.classList.toggle('selected', i === idx));
+  S.selectedIdx = idx;
 }
 
 function triggerCamera() {
@@ -1146,141 +861,148 @@ function triggerCamera() {
   document.getElementById('cameraInput').click();
 }
 
-function onPhotoSelected(event) {
-  const file = event.target.files[0];
+function onPhotoSelected(e) {
+  const file = e.target.files[0];
   if (!file) return;
-
-  // 画像をcanvasでリサイズ（最大1280px）してbase64に変換
-  const img = new Image();
   const reader = new FileReader();
-
-  reader.onload = (e) => {
+  reader.onload = ev => {
+    const img = new Image();
     img.onload = () => {
-      const MAX = 1280;
-      let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) {
-        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-        else { w = Math.round(w * MAX / h); h = MAX; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const base64 = canvas.toDataURL('image/jpeg', 0.85);
-      state.photoBase64 = base64;
-
-      document.getElementById('photoPreview').src = base64;
+      S.photoFull  = resizeCanvas(img, 1280, 0.85); // AI分析用
+      S.photoThumb = resizeCanvas(img, 200,  0.75); // 保存用サムネイル
+      document.getElementById('photoPreview').src = S.photoFull;
       document.getElementById('photoPreview').style.display = 'block';
       document.getElementById('photoPlaceholder').style.display = 'none';
       document.getElementById('photoBtnRow').style.display = 'flex';
-
-      // API無効の場合はanalyzeBtnを隠す
-      if (!state.hasApiKey) {
-        document.getElementById('analyzeBtn').style.display = 'none';
-      }
     };
-    img.src = e.target.result;
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-async function analyzePhoto() {
-  if (!state.photoBase64) {
-    showToast('写真を撮影してください', 'error');
-    return;
+function resizeCanvas(img, maxPx, quality) {
+  let w = img.width, h = img.height;
+  if (w > maxPx || h > maxPx) {
+    if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+    else       { w = Math.round(w * maxPx / h); h = maxPx; }
   }
-  if (!state.hasApiKey) {
-    showToast('APIキーが未設定です', 'error');
-    return;
-  }
-
-  showLoading('AIが食事量を分析中...');
-  try {
-    const r = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imageBase64: state.photoBase64,
-        mealTexture: document.getElementById('newMealTexture').value,
-        mealTime: document.getElementById('newMealTime').value,
-      }),
-    });
-    if (!r.ok) {
-      const err = await r.json();
-      throw new Error(err.error || 'AI分析失敗');
-    }
-    const result = await r.json();
-    state.aiResult = result;
-    showAiResult(result);
-
-    // AIの判定を量セレクタにも反映
-    const idx = AMOUNTS.findIndex(a => a.label === result.amount);
-    if (idx >= 0) selectAmount(idx);
-    else {
-      // パーセントで近いものを選択
-      const closest = AMOUNTS.reduce((best, a, i) =>
-        Math.abs(a.pct - result.percentage) < Math.abs(AMOUNTS[best].pct - result.percentage) ? i : best, 0);
-      selectAmount(closest);
-    }
-
-    showToast('AI分析完了', 'success');
-  } catch (e) {
-    showToast(e.message || 'AI分析に失敗しました', 'error');
-  } finally {
-    hideLoading();
-  }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(img, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', quality);
 }
 
-function showAiResult(result) {
-  document.getElementById('aiResult').classList.add('show');
-  document.getElementById('aiAmount').textContent = result.amount || '—';
-  document.getElementById('aiPct').textContent = `摂取量: 約${result.percentage}%`;
-  document.getElementById('aiComment').textContent = result.comment || '';
+async function analyzePhoto() {
+  if (!S.photoFull) { showToast('写真を撮影してください', 'error'); return; }
+  showLoading('Gemini が食事量を分析中...');
+  try {
+    const result = await api('/api/analyze', {
+      method:'POST',
+      body: JSON.stringify({
+        imageBase64: S.photoFull,
+        mealTexture: document.getElementById('newMealTexture').value,
+        mealTime:    document.getElementById('newMealTime').value,
+      }),
+    });
+    S.aiResult = result;
+    showAiResult(result);
+    // 量セレクタに反映
+    const idx = AMOUNTS.findIndex(a => a.label === result.amount);
+    selectAmount(idx >= 0 ? idx :
+      AMOUNTS.reduce((b, a, i) => Math.abs(a.pct - result.percentage) < Math.abs(AMOUNTS[b].pct - result.percentage) ? i : b, 0));
+    showToast('AI分析完了', 'success');
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoading(); }
+}
 
+function showAiResult(r) {
+  document.getElementById('aiResult').classList.add('show');
+  document.getElementById('aiAmount').textContent = r.amount || '—';
+  document.getElementById('aiPct').textContent = `摂取量: 約${r.percentage}%`;
+  document.getElementById('aiComment').textContent = r.comment || '';
   const fill = document.getElementById('aiBarFill');
-  const pct = result.percentage || 0;
-  fill.style.width = pct + '%';
-  fill.className = 'ai-bar-fill ' + (
-    pct >= 100 ? 'pct-100' : pct >= 75 ? 'pct-75' : pct >= 50 ? 'pct-50' : pct >= 25 ? 'pct-25' : 'pct-10'
-  );
+  const p = r.percentage || 0;
+  fill.style.width = p + '%';
+  fill.className = 'ai-bar-fill ' +
+    (p >= 100 ? 'c100' : p >= 75 ? 'c75' : p >= 50 ? 'c50' : p >= 25 ? 'c25' : 'c10');
 }
 
 async function saveRecord() {
-  if (!state.currentResident) return;
-  if (!state.selectedAmount) {
-    showToast('摂取量を選択してください', 'error');
-    return;
-  }
-
+  if (S.selectedIdx === null) { showToast('摂取量を選択してください', 'error'); return; }
+  if (!S.currentResident) return;
   showLoading('保存中...');
   try {
-    const body = {
-      residentId: state.currentResident.id,
-      mealTime: document.getElementById('newMealTime').value,
-      mealTexture: document.getElementById('newMealTexture').value,
-      imageBase64: state.photoBase64 || null,
-      amount: state.selectedAmount,
-      percentage: state.selectedAmountPct,
-      aiComment: state.aiResult ? state.aiResult.comment : '',
-      note: document.getElementById('newNote').value.trim(),
-    };
-
-    const r = await fetch('/api/records', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+    await api('/api/records', {
+      method:'POST',
+      body: JSON.stringify({
+        residentId:     S.currentResident.id,
+        mealTime:       document.getElementById('newMealTime').value,
+        mealTexture:    document.getElementById('newMealTexture').value,
+        thumbnailBase64: S.photoThumb || null,
+        amount:         AMOUNTS[S.selectedIdx].label,
+        percentage:     AMOUNTS[S.selectedIdx].pct,
+        aiComment:      S.aiResult?.comment || '',
+        note:           document.getElementById('newNote').value.trim(),
+      }),
     });
-    if (!r.ok) throw new Error();
-
-    // 記録一覧を更新して利用者詳細に戻る
-    const rec = await fetch('/api/records/' + state.currentResident.id);
-    state.records = await rec.json();
-
+    S.records = await api('/api/records/' + S.currentResident.id);
     goBack();
     showToast('記録を保存しました', 'success');
-  } catch {
-    showToast('保存に失敗しました', 'error');
-  } finally {
-    hideLoading();
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoading(); }
+}
+
+// ============================
+// 音声入力
+// ============================
+let recognition = null;
+function initVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  document.getElementById('voiceSupported').style.display = '';
+  document.getElementById('voiceBtn').style.display = '';
+
+  recognition = new SR();
+  recognition.lang = 'ja-JP';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    document.getElementById('voiceBtn').classList.add('recording');
+    showToast('🎤 話してください...');
+  };
+  recognition.onresult = e => {
+    const text = e.results[0][0].transcript.trim();
+    // 量のキーワード認識
+    const kw = {'全量':0,'三分の四':1,'半量':2,'四分の一':3,'ほとんど食べず':4,'食べず':5};
+    const matched = Object.entries(kw).find(([k]) => text.includes(k));
+    if (matched) {
+      selectAmount(matched[1]);
+      showToast(`「${matched[0]}」を選択`, 'success');
+    } else {
+      const ta = document.getElementById('newNote');
+      ta.value += (ta.value ? ' ' : '') + text;
+      showToast('入力: ' + text);
+    }
+    document.getElementById('voiceBtn').classList.remove('recording');
+  };
+  recognition.onerror = e => {
+    document.getElementById('voiceBtn').classList.remove('recording');
+    if (e.error !== 'no-speech') showToast('音声認識エラー: ' + e.error, 'error');
+  };
+  recognition.onend = () => {
+    document.getElementById('voiceBtn').classList.remove('recording');
+  };
+}
+
+function toggleVoice() {
+  if (!recognition) { showToast('音声入力は非対応です', 'error'); return; }
+  const btn = document.getElementById('voiceBtn');
+  if (btn.classList.contains('recording')) {
+    recognition.stop();
+  } else {
+    try { recognition.start(); }
+    catch { /* already running */ }
   }
 }
 
@@ -1291,48 +1013,26 @@ function showLoading(text = '処理中...') {
   document.getElementById('loadingText').textContent = text;
   document.getElementById('loadingOverlay').classList.add('show');
 }
-function hideLoading() {
-  document.getElementById('loadingOverlay').classList.remove('show');
-}
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
 
-let toastTimer = null;
+let toastT = null;
 function showToast(msg, type = '') {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.className = 'toast show' + (type ? ' ' + type : '');
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 2800);
 }
-
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function h(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
-// 利用者詳細画面に遷移したとき headerRight をリセット
-function goBack() {
-  document.getElementById('headerRight').innerHTML = '';
-  if (screenStack.length > 0) {
-    const prev = screenStack.pop();
-    showScreen(prev.screen);
-    updateHeader(prev.title, screenStack.length > 0);
-    if (prev.screen === 'screenResident' && state.currentResident) {
-      // headerRightに削除ボタンを再設定
-      document.getElementById('headerRight').innerHTML =
-        `<button class="header-btn" onclick="showDeleteResidentModal('${state.currentResident.id}')" title="削除">🗑</button>`;
-      renderRecords();
-    }
-  } else {
-    showScreen('screenHome');
-    updateHeader('介護食事記録', false);
-  }
-}
+function pad(n) { return String(n).padStart(2,'0'); }
 
 // 起動
-init();
+initFirebase();
 </script>
 </body>
 </html>
