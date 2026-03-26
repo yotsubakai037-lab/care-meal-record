@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>介護食事記録</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #1565C0;
+      --primary-light: #1976D2;
+      --primary-bg: #E3F2FD;
+      --accent: #2E7D32;
+      --accent-light: #43A047;
+      --warn: #E65100;
+      --danger: #C62828;
+      --bg: #F0F4F8;
+      --card: #FFFFFF;
+      --text: #1A1A2E;
+      --text-sub: #546E7A;
+      --border: #CFD8DC;
+      --header-h: 56px;
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 16px;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    /* ========== ヘッダー ========== */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      background: var(--primary);
+      color: #fff;
+      height: calc(var(--header-h) + var(--safe-top));
+      padding-top: var(--safe-top);
+      display: flex;
+      align-items: center;
+      padding: var(--safe-top) 8px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .header-btn {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent;
+      color: #fff; font-size: 22px; cursor: pointer;
+      border-radius: 22px;
+      flex-shrink: 0;
+    }
+    .header-btn:active { background: rgba(255,255,255,.2); }
+    .header-title {
+      flex: 1;
+      font-size: 17px;
+      font-weight: 600;
+      text-align: center;
+      padding: 0 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .header-right { width: 44px; flex-shrink: 0; }
+
+    /* ========== コンテンツ ========== */
+    .screen {
+      display: none;
+      padding-top: calc(var(--header-h) + var(--safe-top));
+      min-height: 100vh;
+      padding-bottom: 24px;
+    }
+    .screen.active { display: block; }
+
+    /* ========== ホーム画面 ========== */
+    .resident-list {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .resident-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      cursor: pointer;
+      transition: transform .1s, box-shadow .1s;
+      -webkit-user-select: none;
+    }
+    .resident-card:active { transform: scale(.97); box-shadow: none; }
+
+    .resident-avatar {
+      width: 48px; height: 48px;
+      border-radius: 24px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-size: 22px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .resident-info { flex: 1; min-width: 0; }
+    .resident-name {
+      font-size: 17px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .resident-meta {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+    .resident-arrow {
+      color: var(--border);
+      font-size: 18px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 24px 24px;
+      color: var(--text-sub);
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 12px; }
+    .empty-text { font-size: 15px; line-height: 1.6; }
+
+    /* ========== FAB ========== */
+    .fab {
+      position: fixed;
+      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      right: 20px;
+      width: 58px; height: 58px;
+      border-radius: 29px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-size: 28px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(21,101,192,.5);
+      cursor: pointer;
+      z-index: 100;
+      transition: transform .1s;
+    }
+    .fab:active { transform: scale(.93); }
+
+    /* ========== 利用者詳細 ========== */
+    .record-list {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .record-card {
+      background: var(--card);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .record-card-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px 10px;
+      gap: 10px;
+    }
+    .record-mealtime-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 10px;
+      background: var(--primary-bg);
+      color: var(--primary);
+    }
+    .record-date {
+      font-size: 13px;
+      color: var(--text-sub);
+      flex: 1;
+    }
+    .record-delete-btn {
+      width: 32px; height: 32px;
+      border-radius: 16px;
+      border: none; background: transparent;
+      color: #B0BEC5; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .record-delete-btn:active { background: #FFEBEE; color: var(--danger); }
+
+    .record-body {
+      display: flex;
+      gap: 12px;
+      padding: 0 14px 14px;
+    }
+    .record-thumb {
+      width: 72px; height: 72px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: var(--bg);
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+    .record-thumb-placeholder {
+      width: 72px; height: 72px;
+      border-radius: 10px;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+    .record-details { flex: 1; min-width: 0; }
+    .amount-bar-wrap {
+      margin-bottom: 6px;
+    }
+    .amount-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .amount-text { font-size: 16px; font-weight: 700; }
+    .amount-pct { font-size: 14px; color: var(--text-sub); }
+    .amount-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .amount-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width .5s ease;
+    }
+    .record-comment {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .record-note {
+      font-size: 13px;
+      color: var(--text);
+      margin-top: 4px;
+      padding: 6px 8px;
+      background: #FFF9C4;
+      border-radius: 6px;
+      line-height: 1.5;
+    }
+    .record-texture {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    /* ========== 新規記録 ========== */
+    .form-section {
+      background: var(--card);
+      margin: 12px;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .form-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 14px 16px 6px;
+    }
+    .form-row {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .form-row:first-of-type { border-top: none; }
+    .form-label {
+      font-size: 14px;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-select, .form-input, .form-textarea {
+      width: 100%;
+      font-size: 16px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      -webkit-appearance: none;
+      appearance: none;
+      outline: none;
+    }
+    .form-select:focus, .form-input:focus, .form-textarea:focus {
+      border-color: var(--primary-light);
+    }
+    .form-select-wrap {
+      position: relative;
+    }
+    .form-select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-sub);
+      pointer-events: none;
+      font-size: 14px;
+    }
+    .form-textarea {
+      resize: none;
+      height: 80px;
+      line-height: 1.5;
+    }
+
+    /* 写真エリア */
+    .photo-area {
+      margin: 12px;
+    }
+    .photo-preview {
+      width: 100%;
+      aspect-ratio: 4/3;
+      border-radius: 14px;
+      object-fit: cover;
+      display: none;
+      background: #000;
+    }
+    .photo-placeholder {
+      width: 100%;
+      aspect-ratio: 4/3;
+      border-radius: 14px;
+      background: var(--card);
+      border: 2px dashed var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .photo-placeholder-icon { font-size: 48px; }
+    .photo-placeholder-text { font-size: 14px; color: var(--text-sub); }
+
+    .photo-btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    /* ========== ボタン ========== */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px 20px;
+      border-radius: 14px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform .1s, opacity .1s;
+      -webkit-user-select: none;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--primary); color: #fff; flex: 1; }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 10px 16px; font-size: 14px; }
+
+    .action-bar {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ========== AI分析結果 ========== */
+    .ai-result {
+      margin: 12px;
+      background: var(--card);
+      border-radius: 14px;
+      padding: 16px;
+      border-left: 4px solid var(--primary-light);
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      display: none;
+    }
+    .ai-result.show { display: block; }
+    .ai-result-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 10px;
+    }
+    .ai-amount-big {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .ai-pct {
+      font-size: 14px;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+    }
+    .ai-bar {
+      height: 12px;
+      border-radius: 6px;
+      background: var(--border);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .ai-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width .6s ease;
+    }
+    .ai-comment {
+      font-size: 14px;
+      color: var(--text-sub);
+      line-height: 1.6;
+    }
+
+    /* ========== ローディング ========== */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .loading-overlay.show { display: flex; }
+    .loading-spinner {
+      width: 52px; height: 52px;
+      border: 4px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    /* ========== モーダル ========== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 300;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      width: 100%;
+      max-width: 480px;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    /* ========== トースト ========== */
+    .toast {
+      position: fixed;
+      bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #323232;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 500;
+      transition: transform .3s ease;
+      white-space: nowrap;
+      max-width: 90vw;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--accent); }
+    .toast.error { background: var(--danger); }
+
+    /* ========== 量セレクター ========== */
+    .amount-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .amount-option {
+      padding: 12px 6px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      text-align: center;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .amount-option.selected {
+      border-color: var(--primary);
+      background: var(--primary-bg);
+    }
+    .amount-option-label { font-size: 14px; font-weight: 600; }
+    .amount-option-pct { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+
+    /* ========== APIキー警告 ========== */
+    .api-warn {
+      margin: 12px;
+      background: #FFF3E0;
+      border: 1.5px solid #FFB74D;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--warn);
+      display: none;
+    }
+    .api-warn.show { display: block; }
+
+    /* ========== 利用者追加フォーム ========== */
+    .screen-inner {
+      padding: 12px;
+    }
+
+    /* 量に応じた色 */
+    .pct-100 { background: #2E7D32; }
+    .pct-75  { background: #1565C0; }
+    .pct-50  { background: #F9A825; }
+    .pct-25  { background: #E65100; }
+    .pct-10  { background: #C62828; }
+
+    /* セクション見出し */
+    .section-header {
+      padding: 16px 12px 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    /* 今日の統計 */
+    .stats-bar {
+      display: flex;
+      gap: 8px;
+      padding: 0 12px 4px;
+    }
+    .stat-chip {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--text-sub);
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    .stat-chip strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header" id="header">
+  <button class="header-btn" id="headerBack" style="display:none" onclick="goBack()">‹</button>
+  <div class="header-title" id="headerTitle">介護食事記録</div>
+  <div class="header-right" id="headerRight"></div>
+</div>
+
+<!-- ローディングオーバーレイ -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">AI分析中...</div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================
+     ホーム画面
+     ============================ -->
+<div class="screen active" id="screenHome">
+  <div id="apiWarn" class="api-warn">
+    ⚠️ ANTHROPIC_API_KEY が未設定のため、AI分析機能は無効です。<br>
+    写真からの自動判定ができません。手動で量を入力できます。
+  </div>
+  <div class="resident-list" id="residentList">
+    <!-- 利用者カード -->
+  </div>
+  <div class="empty-state" id="homeEmpty" style="display:none">
+    <div class="empty-icon">👴</div>
+    <div class="empty-text">利用者がまだ登録されていません<br>右下の＋ボタンで追加してください</div>
+  </div>
+  <button class="fab" onclick="showAddResident()">＋</button>
+</div>
+
+<!-- ============================
+     利用者追加
+     ============================ -->
+<div class="screen" id="screenAddResident">
+  <div class="screen-inner">
+    <div class="form-section">
+      <div class="form-section-title">基本情報</div>
+      <div class="form-row">
+        <label class="form-label">氏名 *</label>
+        <input type="text" class="form-input" id="addResidentName"
+          placeholder="例: 山田 太郎" autocomplete="off" enterkeyhint="next">
+      </div>
+      <div class="form-row">
+        <label class="form-label">部屋番号</label>
+        <input type="text" class="form-input" id="addResidentRoom"
+          placeholder="例: 101号室" autocomplete="off" enterkeyhint="next">
+      </div>
+      <div class="form-row">
+        <label class="form-label">通常の食事形態</label>
+        <div class="form-select-wrap">
+          <select class="form-select" id="addResidentTexture">
+            <option value="普通食">普通食</option>
+            <option value="刻み食">刻み食</option>
+            <option value="ミキサー食">ミキサー食</option>
+            <option value="軟菜食">軟菜食</option>
+            <option value="ペースト食">ペースト食</option>
+            <option value="嚥下調整食">嚥下調整食</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-primary btn-full" onclick="addResident()">登録する</button>
+      <button class="btn btn-secondary btn-full" onclick="goBack()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================
+     利用者詳細
+     ============================ -->
+<div class="screen" id="screenResident">
+  <div class="stats-bar" id="residentStats"></div>
+  <div class="section-header">食事記録</div>
+  <div class="record-list" id="recordList"></div>
+  <div class="empty-state" id="residentEmpty" style="display:none">
+    <div class="empty-icon">🍱</div>
+    <div class="empty-text">記録がまだありません<br>右下のボタンで記録を追加してください</div>
+  </div>
+  <button class="fab" onclick="showNewRecord()">📷</button>
+</div>
+
+<!-- ============================
+     新規記録
+     ============================ -->
+<div class="screen" id="screenNewRecord">
+  <!-- 写真エリア -->
+  <div class="photo-area">
+    <img id="photoPreview" class="photo-preview" src="" alt="食事写真">
+    <div class="photo-placeholder" id="photoPlaceholder" onclick="triggerCamera()">
+      <div class="photo-placeholder-icon">📷</div>
+      <div class="photo-placeholder-text">タップして写真を撮影</div>
+    </div>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment"
+      style="display:none" onchange="onPhotoSelected(event)">
+    <div class="photo-btn-row" id="photoBtnRow" style="display:none">
+      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="triggerCamera()">📷 撮り直す</button>
+      <button class="btn btn-primary btn-sm" style="flex:1" id="analyzeBtn" onclick="analyzePhoto()">🤖 AI分析</button>
+    </div>
+  </div>
+
+  <!-- API警告（記録画面用） -->
+  <div class="api-warn" id="apiWarnRecord">
+    AI分析は利用できません。手動で摂取量を選択してください。
+  </div>
+
+  <!-- AI分析結果 -->
+  <div class="ai-result" id="aiResult">
+    <div class="ai-result-title">🤖 AI分析結果</div>
+    <div class="ai-amount-big" id="aiAmount">—</div>
+    <div class="ai-pct" id="aiPct">—</div>
+    <div class="ai-bar"><div class="ai-bar-fill" id="aiBarFill" style="width:0"></div></div>
+    <div class="ai-comment" id="aiComment"></div>
+  </div>
+
+  <!-- フォーム -->
+  <div class="form-section">
+    <div class="form-section-title">摂取量</div>
+    <div class="form-row" style="border-top:none">
+      <div class="amount-selector" id="amountSelector">
+        <!-- JS生成 -->
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">詳細</div>
+    <div class="form-row">
+      <label class="form-label">食事区分</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="newMealTime">
+          <option>朝食</option>
+          <option selected>昼食</option>
+          <option>夕食</option>
+          <option>おやつ</option>
+          <option>補食</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">食事形態</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="newMealTexture">
+          <option>普通食</option>
+          <option>刻み食</option>
+          <option>ミキサー食</option>
+          <option>軟菜食</option>
+          <option>ペースト食</option>
+          <option>嚥下調整食</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">備考（自由記入）</label>
+      <textarea class="form-textarea" id="newNote" placeholder="食欲の様子、特記事項など..."></textarea>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-accent btn-full" onclick="saveRecord()">✓ 記録を保存</button>
+    <button class="btn btn-secondary btn-full" onclick="goBack()">キャンセル</button>
+  </div>
+</div>
+
+<!-- 利用者削除モーダル -->
+<div class="modal-overlay" id="deleteResidentModal">
+  <div class="modal">
+    <div class="modal-title">利用者を削除しますか？</div>
+    <div style="text-align:center;color:var(--text-sub);font-size:14px">
+      この操作は取り消せません。<br>すべての食事記録も削除されます。
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-full" style="background:#C62828;color:#fff"
+        onclick="confirmDeleteResident()">削除する</button>
+      <button class="btn btn-secondary btn-full" onclick="closeDeleteResidentModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================
+// 状態管理
+// ============================
+const state = {
+  residents: [],
+  records: [],
+  currentResident: null,
+  selectedAmount: null,
+  selectedAmountPct: 0,
+  photoBase64: null,
+  aiResult: null,
+  hasApiKey: true,
+  deleteTargetId: null,
+};
+
+const AMOUNTS = [
+  { label: '全量',         pct: 100 },
+  { label: '3/4量',        pct: 75  },
+  { label: '半量',         pct: 50  },
+  { label: '1/4量',        pct: 25  },
+  { label: 'ほとんど食べず', pct: 10  },
+  { label: '食べず',       pct: 0   },
+];
+
+// ============================
+// 初期化
+// ============================
+async function init() {
+  // APIキー確認
+  try {
+    const r = await fetch('/api/status');
+    const s = await r.json();
+    state.hasApiKey = s.hasApiKey;
+  } catch {}
+
+  if (!state.hasApiKey) {
+    document.getElementById('apiWarn').classList.add('show');
+    document.getElementById('apiWarnRecord').classList.add('show');
+  }
+
+  buildAmountSelector();
+  await loadResidents();
+}
+
+// ============================
+// 画面遷移
+// ============================
+const screenStack = [];
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goBack() {
+  if (screenStack.length > 0) {
+    const prev = screenStack.pop();
+    showScreen(prev.screen);
+    updateHeader(prev.title, screenStack.length > 0);
+    if (prev.screen === 'screenResident') {
+      renderRecords();
+    }
+  } else {
+    showScreen('screenHome');
+    updateHeader('介護食事記録', false);
+  }
+}
+
+function updateHeader(title, showBack) {
+  document.getElementById('headerTitle').textContent = title;
+  document.getElementById('headerBack').style.display = showBack ? '' : 'none';
+}
+
+function pushScreen(toScreen, title) {
+  const cur = document.querySelector('.screen.active');
+  const curTitle = document.getElementById('headerTitle').textContent;
+  screenStack.push({ screen: cur.id, title: curTitle });
+  showScreen(toScreen);
+  updateHeader(title, true);
+}
+
+// ============================
+// 利用者管理
+// ============================
+async function loadResidents() {
+  try {
+    const r = await fetch('/api/residents');
+    state.residents = await r.json();
+  } catch {
+    state.residents = [];
+  }
+  renderResidents();
+}
+
+function renderResidents() {
+  const list = document.getElementById('residentList');
+  const empty = document.getElementById('homeEmpty');
+
+  if (state.residents.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = state.residents.map(r => `
+    <div class="resident-card" onclick="openResident('${r.id}')">
+      <div class="resident-avatar">${r.name.charAt(0)}</div>
+      <div class="resident-info">
+        <div class="resident-name">${escHtml(r.name)}</div>
+        <div class="resident-meta">${r.room ? escHtml(r.room) + ' ・ ' : ''}${escHtml(r.defaultMealTexture)}</div>
+      </div>
+      <div class="resident-arrow">›</div>
+    </div>
+  `).join('');
+}
+
+function showAddResident() {
+  document.getElementById('addResidentName').value = '';
+  document.getElementById('addResidentRoom').value = '';
+  document.getElementById('addResidentTexture').value = '普通食';
+  pushScreen('screenAddResident', '利用者追加');
+}
+
+async function addResident() {
+  const name = document.getElementById('addResidentName').value.trim();
+  if (!name) {
+    showToast('氏名を入力してください', 'error');
+    return;
+  }
+  showLoading('登録中...');
+  try {
+    const r = await fetch('/api/residents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        room: document.getElementById('addResidentRoom').value.trim(),
+        defaultMealTexture: document.getElementById('addResidentTexture').value,
+      }),
+    });
+    if (!r.ok) throw new Error();
+    await loadResidents();
+    goBack();
+    showToast('利用者を登録しました', 'success');
+  } catch {
+    showToast('登録に失敗しました', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// 利用者削除
+let deleteResidentId = null;
+function showDeleteResidentModal(id) {
+  deleteResidentId = id;
+  document.getElementById('deleteResidentModal').classList.add('show');
+}
+function closeDeleteResidentModal() {
+  document.getElementById('deleteResidentModal').classList.remove('show');
+}
+async function confirmDeleteResident() {
+  if (!deleteResidentId) return;
+  closeDeleteResidentModal();
+  showLoading('削除中...');
+  try {
+    await fetch('/api/residents/' + deleteResidentId, { method: 'DELETE' });
+    await loadResidents();
+    // もし今の画面が削除した利用者の画面なら戻る
+    if (state.currentResident && state.currentResident.id === deleteResidentId) {
+      screenStack.length = 0;
+      showScreen('screenHome');
+      updateHeader('介護食事記録', false);
+    }
+    showToast('削除しました');
+  } catch {
+    showToast('削除に失敗しました', 'error');
+  } finally {
+    hideLoading();
+    deleteResidentId = null;
+  }
+}
+
+// ============================
+// 利用者詳細
+// ============================
+async function openResident(residentId) {
+  const resident = state.residents.find(r => r.id === residentId);
+  if (!resident) return;
+  state.currentResident = resident;
+
+  pushScreen('screenResident', resident.name);
+
+  // ヘッダーに削除ボタン
+  document.getElementById('headerRight').innerHTML =
+    `<button class="header-btn" onclick="showDeleteResidentModal('${residentId}')" title="削除">🗑</button>`;
+
+  showLoading('読み込み中...');
+  try {
+    const r = await fetch('/api/records/' + residentId);
+    state.records = await r.json();
+  } catch {
+    state.records = [];
+  } finally {
+    hideLoading();
+  }
+  renderRecords();
+}
+
+function renderRecords() {
+  const list = document.getElementById('recordList');
+  const empty = document.getElementById('residentEmpty');
+  const stats = document.getElementById('residentStats');
+
+  if (state.records.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = '';
+    stats.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // 今日の統計
+  const today = new Date().toDateString();
+  const todayRec = state.records.filter(r => new Date(r.createdAt).toDateString() === today);
+  if (todayRec.length > 0) {
+    const avgPct = Math.round(todayRec.reduce((a, r) => a + r.percentage, 0) / todayRec.length);
+    stats.innerHTML = `
+      <div class="stat-chip">今日: <strong>${todayRec.length}件</strong></div>
+      <div class="stat-chip">平均摂取: <strong>${avgPct}%</strong></div>
+    `;
+  } else {
+    stats.innerHTML = '';
+  }
+
+  list.innerHTML = state.records.map(rec => {
+    const dt = new Date(rec.createdAt);
+    const dateStr = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
+    const colorClass = rec.percentage >= 100 ? 'pct-100'
+      : rec.percentage >= 75 ? 'pct-75'
+      : rec.percentage >= 50 ? 'pct-50'
+      : rec.percentage >= 25 ? 'pct-25' : 'pct-10';
+
+    const thumbHtml = rec.imageBase64
+      ? `<img class="record-thumb" src="${rec.imageBase64}" alt="食事写真" loading="lazy">`
+      : `<div class="record-thumb-placeholder">🍱</div>`;
+
+    const commentHtml = rec.aiComment
+      ? `<div class="record-comment">${escHtml(rec.aiComment)}</div>` : '';
+    const noteHtml = rec.note
+      ? `<div class="record-note">📝 ${escHtml(rec.note)}</div>` : '';
+
+    return `
+      <div class="record-card">
+        <div class="record-card-header">
+          <span class="record-mealtime-badge">${escHtml(rec.mealTime)}</span>
+          <span class="record-date">${dateStr}</span>
+          <button class="record-delete-btn" onclick="deleteRecord('${rec.id}')">✕</button>
+        </div>
+        <div class="record-body">
+          ${thumbHtml}
+          <div class="record-details">
+            <div class="amount-bar-wrap">
+              <div class="amount-label">
+                <span class="amount-text">${escHtml(rec.amount)}</span>
+                <span class="amount-pct">${rec.percentage}%</span>
+              </div>
+              <div class="amount-bar">
+                <div class="amount-bar-fill ${colorClass}" style="width:${rec.percentage}%"></div>
+              </div>
+            </div>
+            <div class="record-texture">${escHtml(rec.mealTexture)}</div>
+            ${commentHtml}
+            ${noteHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function deleteRecord(recordId) {
+  if (!state.currentResident) return;
+  if (!confirm('この記録を削除しますか？')) return;
+  showLoading('削除中...');
+  try {
+    await fetch(`/api/records/${state.currentResident.id}/${recordId}`, { method: 'DELETE' });
+    const r = await fetch('/api/records/' + state.currentResident.id);
+    state.records = await r.json();
+    renderRecords();
+    showToast('削除しました');
+  } catch {
+    showToast('削除に失敗しました', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ============================
+// 新規記録
+// ============================
+function showNewRecord() {
+  if (!state.currentResident) return;
+
+  // リセット
+  state.photoBase64 = null;
+  state.aiResult = null;
+  state.selectedAmount = null;
+  state.selectedAmountPct = 0;
+
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('photoPlaceholder').style.display = '';
+  document.getElementById('photoBtnRow').style.display = 'none';
+  document.getElementById('aiResult').classList.remove('show');
+  document.getElementById('newNote').value = '';
+
+  // 利用者のデフォルト食事形態を設定
+  const textureSel = document.getElementById('newMealTexture');
+  textureSel.value = state.currentResident.defaultMealTexture || '普通食';
+
+  // 時間帯から食事区分を自動設定
+  const h = new Date().getHours();
+  const mealTimeSel = document.getElementById('newMealTime');
+  if (h < 10) mealTimeSel.value = '朝食';
+  else if (h < 14) mealTimeSel.value = '昼食';
+  else if (h < 17) mealTimeSel.value = 'おやつ';
+  else mealTimeSel.value = '夕食';
+
+  selectAmount(null);
+  pushScreen('screenNewRecord', '食事記録');
+  document.getElementById('headerRight').innerHTML = '';
+}
+
+function buildAmountSelector() {
+  const wrap = document.getElementById('amountSelector');
+  wrap.innerHTML = AMOUNTS.map((a, i) => `
+    <div class="amount-option" id="amountOpt${i}" onclick="selectAmount(${i})">
+      <div class="amount-option-label">${a.label}</div>
+      <div class="amount-option-pct">${a.pct}%</div>
+    </div>
+  `).join('');
+}
+
+function selectAmount(idx) {
+  AMOUNTS.forEach((_, i) => {
+    const el = document.getElementById('amountOpt' + i);
+    if (el) el.classList.toggle('selected', i === idx);
+  });
+  if (idx !== null && idx !== undefined) {
+    state.selectedAmount = AMOUNTS[idx].label;
+    state.selectedAmountPct = AMOUNTS[idx].pct;
+  } else {
+    state.selectedAmount = null;
+    state.selectedAmountPct = 0;
+  }
+}
+
+function triggerCamera() {
+  document.getElementById('cameraInput').value = '';
+  document.getElementById('cameraInput').click();
+}
+
+function onPhotoSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 画像をcanvasでリサイズ（最大1280px）してbase64に変換
+  const img = new Image();
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    img.onload = () => {
+      const MAX = 1280;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.85);
+      state.photoBase64 = base64;
+
+      document.getElementById('photoPreview').src = base64;
+      document.getElementById('photoPreview').style.display = 'block';
+      document.getElementById('photoPlaceholder').style.display = 'none';
+      document.getElementById('photoBtnRow').style.display = 'flex';
+
+      // API無効の場合はanalyzeBtnを隠す
+      if (!state.hasApiKey) {
+        document.getElementById('analyzeBtn').style.display = 'none';
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzePhoto() {
+  if (!state.photoBase64) {
+    showToast('写真を撮影してください', 'error');
+    return;
+  }
+  if (!state.hasApiKey) {
+    showToast('APIキーが未設定です', 'error');
+    return;
+  }
+
+  showLoading('AIが食事量を分析中...');
+  try {
+    const r = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: state.photoBase64,
+        mealTexture: document.getElementById('newMealTexture').value,
+        mealTime: document.getElementById('newMealTime').value,
+      }),
+    });
+    if (!r.ok) {
+      const err = await r.json();
+      throw new Error(err.error || 'AI分析失敗');
+    }
+    const result = await r.json();
+    state.aiResult = result;
+    showAiResult(result);
+
+    // AIの判定を量セレクタにも反映
+    const idx = AMOUNTS.findIndex(a => a.label === result.amount);
+    if (idx >= 0) selectAmount(idx);
+    else {
+      // パーセントで近いものを選択
+      const closest = AMOUNTS.reduce((best, a, i) =>
+        Math.abs(a.pct - result.percentage) < Math.abs(AMOUNTS[best].pct - result.percentage) ? i : best, 0);
+      selectAmount(closest);
+    }
+
+    showToast('AI分析完了', 'success');
+  } catch (e) {
+    showToast(e.message || 'AI分析に失敗しました', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+function showAiResult(result) {
+  document.getElementById('aiResult').classList.add('show');
+  document.getElementById('aiAmount').textContent = result.amount || '—';
+  document.getElementById('aiPct').textContent = `摂取量: 約${result.percentage}%`;
+  document.getElementById('aiComment').textContent = result.comment || '';
+
+  const fill = document.getElementById('aiBarFill');
+  const pct = result.percentage || 0;
+  fill.style.width = pct + '%';
+  fill.className = 'ai-bar-fill ' + (
+    pct >= 100 ? 'pct-100' : pct >= 75 ? 'pct-75' : pct >= 50 ? 'pct-50' : pct >= 25 ? 'pct-25' : 'pct-10'
+  );
+}
+
+async function saveRecord() {
+  if (!state.currentResident) return;
+  if (!state.selectedAmount) {
+    showToast('摂取量を選択してください', 'error');
+    return;
+  }
+
+  showLoading('保存中...');
+  try {
+    const body = {
+      residentId: state.currentResident.id,
+      mealTime: document.getElementById('newMealTime').value,
+      mealTexture: document.getElementById('newMealTexture').value,
+      imageBase64: state.photoBase64 || null,
+      amount: state.selectedAmount,
+      percentage: state.selectedAmountPct,
+      aiComment: state.aiResult ? state.aiResult.comment : '',
+      note: document.getElementById('newNote').value.trim(),
+    };
+
+    const r = await fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error();
+
+    // 記録一覧を更新して利用者詳細に戻る
+    const rec = await fetch('/api/records/' + state.currentResident.id);
+    state.records = await rec.json();
+
+    goBack();
+    showToast('記録を保存しました', 'success');
+  } catch {
+    showToast('保存に失敗しました', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ============================
+// UI ユーティリティ
+// ============================
+function showLoading(text = '処理中...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// 利用者詳細画面に遷移したとき headerRight をリセット
+function goBack() {
+  document.getElementById('headerRight').innerHTML = '';
+  if (screenStack.length > 0) {
+    const prev = screenStack.pop();
+    showScreen(prev.screen);
+    updateHeader(prev.title, screenStack.length > 0);
+    if (prev.screen === 'screenResident' && state.currentResident) {
+      // headerRightに削除ボタンを再設定
+      document.getElementById('headerRight').innerHTML =
+        `<button class="header-btn" onclick="showDeleteResidentModal('${state.currentResident.id}')" title="削除">🗑</button>`;
+      renderRecords();
+    }
+  } else {
+    showScreen('screenHome');
+    updateHeader('介護食事記録', false);
+  }
+}
+
+// 起動
+init();
+</script>
+</body>
+</html>
